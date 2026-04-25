@@ -13,6 +13,7 @@
 -   **Smart Notifications:** Real-time push notifications for appointment updates and messages.
 -   **Role-Based Access Control:** Distinct portals and functionalities for Students and Lecturers.
 -   **Secure Authentication:** JWT-based authentication with Bcrypt password hashing.
+-   **AI Consultation Assistant:** AI-powered guidance to help students prepare for consultations (Gemini AI Integration).
 -   **Structured Logging:** Detailed system monitoring using Logrus (JSON formatted).
 
 ## 🛠️ Tech Stack
@@ -81,6 +82,15 @@ This project follows the **Layered Architecture (Clean Architecture)** principle
     ```bash
     npm run dev
     ```
+
+## 🔐 Demo Credentials
+
+You can use the following accounts to test the platform. The database is automatically populated with these accounts on the first run via the built-in Seeder.
+
+| Role | Username (ID) | Password |
+| :--- | :--- | :--- |
+| **Mahasiswa** | `20010101` | `password123` |
+| **Dosen** | `19800101` | `password123` |
 
 ## 📄 License
 

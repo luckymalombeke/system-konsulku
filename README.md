@@ -1,101 +1,105 @@
-# KonsulKu - Modern Consultation Platform 🎓💬
+<div align="center">
 
-[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
-[![React Version](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+![KonsulKu Banner](assets/banner.png)
 
-**KonsulKu** is a high-performance, full-stack consultation platform designed to bridge the gap between Students (Mahasiswa) and Lecturers (Dosen). Built with a focus on real-time communication, scalability, and clean architecture.
+# 🎓 KonsulKu
+### *Elevating Academic Consultation with AI Intelligence*
 
-## 🚀 Key Features
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://golang.org/)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![GORM](https://img.shields.io/badge/GORM-v1.25-blue?style=for-the-badge&logo=gorm&logoColor=white)](https://gorm.io/)
+[![Gemini AI](https://img.shields.io/badge/AI-Gemini--Flash-purple?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
--   **Real-time Chat:** Instant messaging between students and lecturers powered by WebSockets.
--   **Appointment Management:** Seamless booking system with status tracking (Pending, Approved, Rejected, Cancelled).
--   **Smart Notifications:** Real-time push notifications for appointment updates and messages.
--   **Role-Based Access Control:** Distinct portals and functionalities for Students and Lecturers.
--   **Secure Authentication:** JWT-based authentication with Bcrypt password hashing.
--   **AI Consultation Assistant:** AI-powered guidance to help students prepare for consultations (Gemini AI Integration).
--   **Structured Logging:** Detailed system monitoring using Logrus (JSON formatted).
+---
 
-## 🛠️ Tech Stack
+**KonsulKu** is a cutting-edge, full-stack platform designed to revolutionize the way students and lecturers interact. By integrating **Google Gemini AI**, we don't just schedule meetings—we empower students to prepare for them.
 
-### Backend (The "Engine")
--   **Language:** Go (Golang)
--   **Framework:** Gin Gonic (High-performance HTTP web framework)
--   **ORM:** GORM (Object Relational Mapper for MySQL)
--   **Real-time:** Gorilla WebSocket
--   **Logging:** Logrus (Structured logging)
--   **Authentication:** JWT (JSON Web Token)
+[Explore Features](#-key-features) • [View Architecture](#-system-architecture) • [Quick Start](#-installation--setup) • [Demo Credentials](#-demo-credentials)
 
-### Frontend (The "Interface")
--   **Library:** React.js (Vite)
--   **Styling:** CSS3 / Tailwind (Custom UI)
--   **API Client:** Native Fetch / Axios integration
+</div>
 
-## 🏗️ Architecture
+## ✨ Key Features
 
-This project follows the **Layered Architecture (Clean Architecture)** principle to ensure the codebase is maintainable, testable, and scalable:
+-   🤖 **AI Consultation Assistant**: Integrated with Google Gemini to analyze consultation topics and provide smart preparation advice.
+-   💬 **Real-time Communication**: Seamless instant messaging powered by **WebSockets** for a responsive chat experience.
+-   📅 **Smart Scheduling**: Comprehensive appointment lifecycle management (Pending, Approved, Rejected, Cancelled).
+-   🔔 **Live Notifications**: Instant updates for new messages or appointment status changes.
+-   🛡️ **Enterprise-Grade Security**: Role-Based Access Control (RBAC) and JWT authentication with Bcrypt encryption.
+-   📜 **Audit Logging**: Structured JSON logging using **Logrus** for high-level observability.
 
-1.  **Handlers:** Responsible for handling HTTP requests and responses.
-2.  **Services:** Contains the core business logic.
-3.  **Repositories:** Manages database interactions using the **Repository Pattern** (isolating database logic from business logic).
-4.  **Models:** Defines the data structures and database schema.
+---
+
+## 🧠 AI Integration Workflow
+
+How the AI Assistant helps students prepare:
+
+```mermaid
+graph TD
+    A[Student Enters Topic & Problem] --> B{Click Tanya Asisten AI}
+    B --> C[Backend calls Gemini API]
+    C --> D{API Success?}
+    D -- Yes --> E[Display AI-Generated Advice]
+    D -- No --> F[Activate Smart Fallback System]
+    F --> G[Display Rule-Based Advice]
+    E --> H[Student is Ready for Consultation!]
+    G --> H
+```
+
+---
+
+## 🏗️ System Architecture
+
+This project implements a **Clean Layered Architecture** for maximum maintainability:
+
+-   **Frontend**: React (Vite) + Tailwind CSS (Responsive UI)
+-   **Backend**: Go (Gin Gonic)
+-   **Database**: MySQL (GORM)
+-   **Real-time**: Gorilla WebSocket
+-   **Service Layer**: Handles complex logic like Gemini AI integration and Fallback mechanisms.
+
+---
 
 ## 🔧 Installation & Setup
 
-### Prerequisites
--   Go 1.25 or higher
--   MySQL Server (XAMPP recommended for Windows)
--   Node.js & npm (for Frontend)
+### 1. Backend Setup
+```bash
+# Clone the project
+git clone https://github.com/luckymalombeke/system-konsulku.git
 
-### Backend Setup
-1.  Clone the repository.
-2.  Create a MySQL database named `backend_konsulku`.
-3.  Configure your environment variables in a `.env` file:
-    ```env
-    DB_HOST=127.0.0.1
-    DB_PORT=3306
-    DB_USER=root
-    DB_PASSWORD=
-    DB_NAME=backend_konsulku
-    JWT_SECRET=your-secret-key
-    PORT=8081
-    ```
-4.  Install dependencies:
-    ```bash
-    go mod tidy
-    ```
-5.  Run the application (Auto-migration will automatically create the tables):
-    ```bash
-    go run main.go
-    ```
+# Configure Environment
+cp .env.example .env # Ensure DB and GEMINI_API_KEY are set
 
-### Frontend Setup
-1.  Navigate to the frontend directory:
-    ```bash
-    cd frontend-UI-fix
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Run the development server:
-    ```bash
-    npm run dev
-    ```
+# Run the engine
+go run main.go
+```
+
+### 2. Frontend Setup
+```bash
+cd frontend-UI-fix
+npm install
+npm run dev
+```
+
+---
 
 ## 🔐 Demo Credentials
 
-You can use the following accounts to test the platform. The database is automatically populated with these accounts on the first run via the built-in Seeder.
+The system includes an **Auto-Seeder**. On the first run, you can use these accounts to explore:
 
 | Role | Username (ID) | Password |
 | :--- | :--- | :--- |
 | **Mahasiswa** | `20010101` | `password123` |
 | **Dosen** | `19800101` | `password123` |
 
+---
+
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
----
+<div align="center">
 
-Built with ❤️ for better academic consultation experiences.
+Built with 💜 by **Lucky Malombeke**
+
+</div>

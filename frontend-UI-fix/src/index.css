@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #F8F7FF;
+    color: #111827;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #c4b5e8;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4A1D8F;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-sm p-5 border border-gray-100;
+  }
+
+  .btn-primary {
+    @apply bg-[#4A1D8F] text-white rounded-lg py-2 px-4 hover:bg-[#3A1572] transition-colors duration-200 font-medium text-sm;
+  }
+
+  .btn-outlined {
+    @apply border border-[#4A1D8F] text-[#4A1D8F] rounded-lg py-2 px-4 hover:bg-[#F0E9FF] transition-colors duration-200 font-medium text-sm;
+  }
+
+  .input-field {
+    @apply border border-gray-200 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#4A1D8F] text-sm transition-all duration-200;
+  }
+
+  .status-badge {
+    @apply rounded-full px-3 py-1 text-xs font-medium;
+  }
+
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-white/70 hover:bg-white/10 transition-all duration-200 cursor-pointer text-sm font-medium;
+  }
+
+  .sidebar-nav-item.active {
+    @apply bg-[#FFD700] text-[#3A1572] font-semibold;
+  }
+
+  .page-bg {
+    @apply bg-[#F8F7FF] min-h-screen relative overflow-hidden;
+  }
+
+  /* Glassmorphism Utilities */
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl;
+  }
+  
+  .glass-panel-dark {
+    @apply bg-[#3A1572]/70 backdrop-blur-md border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.1)] rounded-2xl text-white;
+  }
+
+  /* Enhanced SaaS Card lifted hover */
+  .card {
+    @apply bg-white rounded-xl shadow-[0_2px_10px_rgb(0,0,0,0.02)] p-5 border border-gray-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1;
+  }
+
+  /* Animation Utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slide-up-delayed {
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+

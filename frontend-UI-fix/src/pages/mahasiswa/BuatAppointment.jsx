@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '../../components/Layout';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
-import { Check, ChevronLeft, ChevronRight, Upload, Calendar, Clock, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Upload, Calendar, Clock, X, Sparkles, Loader2 } from 'lucide-react';
+import { getDosenList, getAIAdvice } from '../../api';
 
 const dosenOptions = [
   { id: 1, name: 'Stenly R. Pungus, S.Kom., MT., M.M., PhD', prodi: 'Sistem Informasi', skills: ['Machine Learning', 'Data Science'], available: true },
@@ -46,10 +47,29 @@ export default function BuatAppointment() {
   const [isLoadingDosen, setIsLoadingDosen] = useState(true);
   const [showDosenDetail, setShowDosenDetail] = useState(null);
 
+  // AI States
+  const [topic, setTopic] = useState("Pembahasan metodologi dan analisis data skripsi");
+  const [problem, setProblem] = useState("Saya memiliki beberapa pertanyaan terkait metode pengumpulan data yang tepat untuk penelitian saya. Penelitian saya menggunakan pendekatan kuantitatif dengan responden mahasiswa aktif. Saya ingin mendiskusikan apakah metode survei atau eksperimen yang lebih cocok.");
+  const [aiAdvice, setAiAdvice] = useState("");
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+
+  const handleGetAIAdvice = async () => {
+    if (!topic || !problem) return;
+    setIsLoadingAI(true);
+    try {
+      const res = await getAIAdvice(topic, problem);
+      setAiAdvice(res.advice);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal mendapatkan saran AI. Pastikan API Key sudah terpasang.");
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
   useEffect(() => {
     const fetchDosen = async () => {
       try {
-        const { getDosenList } = await import('../../api');
         const data = await getDosenList();
         setDosenList(data || []);
       } catch (err) {
@@ -279,34 +299,86 @@ export default function BuatAppointment() {
 
         {/* Step 3: Detail Konsultasi */}
         {currentStep === 2 && (
-          <div className="card max-w-2xl">
-            <h2 className="font-semibold text-gray-800 mb-5">Detail Konsultasi</h2>
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Topik Konsultasi <span className="text-red-500">*</span></label>
-                <textarea
-                  rows={3}
-                  placeholder="Contoh: Revisi metodologi penelitian bab 3"
-                  defaultValue="Pembahasan metodologi dan analisis data skripsi"
-                  className="input-field resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi / Pertanyaan <span className="text-red-500">*</span></label>
-                <textarea
-                  rows={5}
-                  placeholder="Jelaskan secara detail pertanyaan atau topik yang ingin Anda diskusikan..."
-                  defaultValue="Saya memiliki beberapa pertanyaan terkait metode pengumpulan data yang tepat untuk penelitian saya. Penelitian saya menggunakan pendekatan kuantitatif dengan responden mahasiswa aktif. Saya ingin mendiskusikan apakah metode survei atau eksperimen yang lebih cocok."
-                  className="input-field resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Lampiran (Opsional)</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#4A1D8F] hover:bg-[#F0E9FF]/30 transition-colors">
-                  <Upload size={28} className="text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500 font-medium">Klik untuk upload atau drag &amp; drop</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, DOCX, JPG — maks. 10MB</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="card lg:col-span-2">
+              <h2 className="font-semibold text-gray-800 mb-5">Detail Konsultasi</h2>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Topik Konsultasi <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Revisi metodologi penelitian bab 3"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className="input-field"
+                  />
                 </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Deskripsi / Pertanyaan <span className="text-red-500">*</span></label>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleGetAIAdvice();
+                      }}
+                      disabled={isLoadingAI}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[#F0E9FF] border border-[#4A1D8F]/20 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#4A1D8F] hover:bg-[#4A1D8F] hover:text-white transition-all shadow-sm disabled:opacity-50"
+                    >
+                      {isLoadingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                      Tanya Asisten AI ✨
+                    </button>
+                  </div>
+                  <textarea
+                    rows={5}
+                    placeholder="Jelaskan secara detail pertanyaan atau topik yang ingin Anda diskusikan..."
+                    value={problem}
+                    onChange={(e) => setProblem(e.target.value)}
+                    className="input-field resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Lampiran (Opsional)</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#4A1D8F] hover:bg-[#F0E9FF]/30 transition-colors">
+                    <Upload size={28} className="text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500 font-medium">Klik untuk upload atau drag &amp; drop</p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, DOCX, JPG — maks. 10MB</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className={`card overflow-hidden transition-all duration-500 ${aiAdvice ? 'opacity-100 translate-y-0' : 'opacity-50 translate-y-4'}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-[#F0E9FF] rounded-lg">
+                    <Sparkles size={16} className="text-[#4A1D8F]" />
+                  </div>
+                  <h3 className="font-bold text-sm text-gray-900">Saran Persiapan AI</h3>
+                </div>
+                
+                {isLoadingAI ? (
+                  <div className="py-10 flex flex-col items-center justify-center text-gray-400 italic">
+                    <Loader2 size={24} className="animate-spin mb-2 text-[#4A1D8F]" />
+                    <p className="text-xs text-center px-4">AI sedang menganalisa masalah Anda...</p>
+                  </div>
+                ) : aiAdvice ? (
+                  <div className="text-xs text-gray-600 leading-relaxed whitespace-pre-line bg-[#F8F5FF] p-4 rounded-xl border border-[#EBE0FF]">
+                    {aiAdvice}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-gray-400 text-xs px-4">
+                    Belum ada saran. Klik <b>"Tanya Asisten AI"</b> untuk mendapatkan panduan persiapan konsultasi.
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-[#4A1D8F] rounded-2xl p-5 text-white shadow-lg shadow-[#4A1D8F]/20">
+                <h4 className="font-bold text-sm mb-2 flex items-center gap-2">
+                   💡 Tips Sukses
+                </h4>
+                <p className="text-[10px] leading-relaxed opacity-90">
+                  Konsultasi yang efektif dimulai dari persiapan yang matang. Gunakan saran AI untuk memastikan poin-poin penting Anda tersampaikan ke Dosen.
+                </p>
               </div>
             </div>
           </div>

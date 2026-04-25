@@ -6,6 +6,7 @@ import (
 	"konsulku/handlers"
 	"konsulku/middlewares"
 	"konsulku/models"
+	"konsulku/utils"
 	"log"
 	"os"
 
@@ -38,6 +39,9 @@ func main() {
 		fmt.Println("Database berhasil diselaraskan!")
 	}
 
+	// Isi data dummy jika database kosong
+	utils.SeedData()
+
 	r := gin.Default()
 	r.Use(middlewares.CORSMiddleware())
 
@@ -65,6 +69,9 @@ func main() {
 		
 		// Notification
 		authorized.GET("/notification", handlers.HandleGetNotifications)
+
+		// AI Assistant
+		authorized.POST("/ai/advice", handlers.HandleAIAdvice)
 
 		// WebSocket
 		authorized.GET("/ws", handlers.HandleWebSocket)

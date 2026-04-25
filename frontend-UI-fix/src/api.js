@@ -86,6 +86,13 @@ export const getMessages = (targetUserID) => {
   });
 };
 
+export const getAIAdvice = (topic, problem) => {
+  return apiCall('/api/ai/advice', {
+    method: 'POST',
+    body: JSON.stringify({ topic, problem }),
+  });
+};
+
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');

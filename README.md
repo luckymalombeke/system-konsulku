@@ -19,7 +19,7 @@
 
 ## ✨ Key Features
 
--   🤖 **AI Consultation Assistant**: Integrated with Google Gemini to analyze consultation topics and provide smart preparation advice.
+-   🤖 **AI Consultation Assistant**: Integrated with Google Gemini to analyze consultation topics with a **Smart Fallback Mechanism** to ensure advice is always available even during API outages.
 -   💬 **Real-time Communication**: Seamless instant messaging powered by **WebSockets** for a responsive chat experience.
 -   📅 **Smart Scheduling**: Comprehensive appointment lifecycle management (Pending, Approved, Rejected, Cancelled).
 -   🔔 **Live Notifications**: Instant updates for new messages or appointment status changes.

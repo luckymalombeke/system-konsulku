@@ -1,7 +1,5 @@
 <div align="center">
 
-![KonsulKu Banner](assets/banner.png)
-
 # 🎓 KonsulKu
 ### *Elevating Academic Consultation with AI Intelligence*
 

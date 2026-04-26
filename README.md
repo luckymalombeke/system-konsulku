@@ -14,7 +14,7 @@
 
 ---
 
-**KonsulKu** is a cutting-edge, full-stack platform designed to revolutionize the way students and lecturers interact. By integrating **Google Gemini AI**, we don't just schedule meetings—we empower students to prepare for them.
+**KonsulKu** is a full-stack platform designed to facilitate academic consultations. By integrating **Google Gemini AI**, the system provides intelligent preparation advice and document analysis to enhance the quality of student-lecturer interactions.
 
 [Explore Features](#-key-features) • [View Architecture](#-system-architecture) • [Quick Start](#-installation--setup) • [Demo Credentials](#-demo-credentials)
 
@@ -32,20 +32,16 @@
 
 ---
 
-### 1. Preparation Advice (Fallback System)
-```mermaid
-graph TD
-    A[Student Enters Topic & Problem] --> B{Click Tanya Asisten AI}
-    B --> C[Backend calls Gemini API]
-    C --> D{API Success?}
-    D -- Yes --> E[Display AI-Generated Advice]
-    D -- No --> F[Activate Smart Fallback System]
-    F --> G[Display Rule-Based Advice]
-    E --> H[Student is Ready!]
-    G --> H
-```
+## 🤖 AI Workflow
 
-### 2. RAG Flow (Document Analysis)
+### 1. RAG (Document Analysis)
+1. User upload file (PDF/TXT)
+2. Backend extract text
+3. Text is processed as context for the LLM
+4. Context is sent to Gemini API
+5. AI generates context-aware feedback
+6. Response is rendered to the user
+
 ```mermaid
 graph LR
     A[Upload Proposal] --> B[Extract Text]
@@ -54,7 +50,14 @@ graph LR
     D --> E[Display Review Result]
 ```
 
-### 3. Agentic Workflow (Function Calling)
+### 2. Agentic AI (Function Calling)
+1. User interacts with AI assistant
+2. AI analyzes intent and determines if data access is required
+3. AI triggers a function call (e.g., `get_lecturer_schedule`)
+4. Backend executes the function against the database
+5. Data is returned to the AI model
+6. AI generates a natural language response based on real-time data
+
 ```mermaid
 graph LR
     A["User Ask: 'Is Prof. Budi available?'"] --> B[AI Analyzes Intent]
@@ -65,17 +68,71 @@ graph LR
     F --> G[Generate Natural Response]
 ```
 
+## 🧠 AI Output Example
+
+**Input:**
+"Apakah judul skripsi saya sudah tepat?"
+
+**Output:**
+"Judul yang Anda ajukan sudah cukup spesifik, namun bagian metode penelitian masih belum tergambar jelas. Disarankan untuk menambahkan pendekatan penelitian..."
+
 ---
 
-## 🏗️ System Architecture
+## 🔄 System Flow
 
-This project implements a **Clean Layered Architecture** for maximum maintainability:
+1. **Authentication**: User login → JWT issued.
+2. **Consultation**: User creates appointment → Data persisted to DB.
+3. **AI Analysis**: User uploads document → RAG processing via Gemini.
+4. **Communication**: Real-time chat with lecturers or AI → WebSocket.
+5. **Updates**: System pushes real-time status notifications.
 
--   **Frontend**: React (Vite) + Tailwind CSS (Responsive UI)
--   **Backend**: Go (Gin Gonic)
--   **Database**: MySQL (GORM)
--   **Real-time**: Gorilla WebSocket
--   **Service Layer**: Handles complex logic like Gemini AI integration and Fallback mechanisms.
+---
+
+## 🏗️ System Architecture & Technical Decisions
+
+- **Go (Gin)**: High-performance backend with efficient concurrency handling.
+- **WebSocket**: Real-time bidirectional communication for chat and notifications.
+- **Gemini AI**: Supports function calling for agentic workflows and advanced document analysis.
+- **RAG (Retrieval-Augmented Generation)**: Improves AI accuracy by grounding responses in user-provided documents.
+- **Clean Architecture**: Separation of concerns (Handlers, Services, Repositories) for scalability and maintainability.
+- **MySQL (GORM)**: Robust relational data management with an ORM layer.
+
+---
+
+## 📡 API Endpoints
+
+### 🔐 Authentication
+- `POST /api/login`
+- `POST /api/register`
+
+### 👨‍🎓 Users
+- `GET /api/users`
+- `GET /api/users/:id`
+
+### 📅 Consultations
+- `GET /api/consultations`
+- `POST /api/consultations`
+- `PUT /api/consultations/:id`
+- `DELETE /api/consultations/:id`
+
+### 💬 Chat (WebSocket)
+- `WS /api/ws/chat`
+
+#### Example Request: `POST /api/login`
+**Request Body:**
+```json
+{
+  "username": "20010101",
+  "password": "password123"
+}
+```
+**Response:**
+```json
+{
+  "token": "jwt_token_here",
+  "role": "mahasiswa"
+}
+```
 
 ---
 

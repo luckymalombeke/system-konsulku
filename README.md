@@ -57,7 +57,7 @@ graph LR
 ### 3. Agentic Workflow (Function Calling)
 ```mermaid
 graph LR
-    A[User Ask: "Is Prof. Budi available?"] --> B[AI Analyzes Intent]
+    A["User Ask: 'Is Prof. Budi available?'"] --> B[AI Analyzes Intent]
     B --> C{Need Database?}
     C -- Yes --> D[Call get_lecturer_schedule]
     D --> E[Execute SQL Query]

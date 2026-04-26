@@ -231,12 +231,12 @@ func (s *AIService) generateSmartFallback(topic, problem string) string {
 	advice := "### 💡 Saran Persiapan (Smart Fallback Mode)\n\n"
 	
 	// --- DINAMIS BERDASARKAN KONTEN ---
-	if strings.Contains(topicLower, "skripsi") || strings.Contains(topicLower, "tugas akhir") || strings.Contains(topicLower, "ta") {
+	if strings.Contains(topicLower, "skripsi") || strings.Contains(topicLower, "tugas akhir") || strings.Contains(topicLower, " ta ") || strings.HasSuffix(topicLower, " ta") {
 		advice += "Berdasarkan topik **Skripsi** Anda, berikut panduannya:\n\n"
 		advice += "1. **Progress Report**: Siapkan catatan bab mana yang sudah selesai dan di mana letak kendala spesifiknya.\n"
 		advice += "2. **Literatur**: Bawa minimal 3 jurnal referensi yang Anda gunakan sebagai dasar argumen.\n"
 		advice += "3. **Metodologi**: Siapkan alasan kuat kenapa Anda memilih metode tersebut jika ditanya Dosen.\n"
-	} else if strings.Contains(topicLower, "koding") || strings.Contains(topicLower, "program") || strings.Contains(problemLower, "error") {
+	} else if strings.Contains(topicLower, "koding") || strings.Contains(topicLower, "program") || strings.Contains(topicLower, "error") || strings.Contains(problemLower, "error") {
 		advice += "Berdasarkan kendala **Pemrograman** Anda, berikut panduannya:\n\n"
 		advice += "1. **Code Snippet**: Siapkan baris kode yang error atau yang ingin dikonsultasikan di laptop Anda.\n"
 		advice += "2. **Log Error**: Salin pesan error yang muncul agar Dosen bisa membantu debug dengan cepat.\n"

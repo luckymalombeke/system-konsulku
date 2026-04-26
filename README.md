@@ -9,6 +9,7 @@
 [![Gemini AI](https://img.shields.io/badge/AI-Gemini--Flash-purple?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
 [![RAG](https://img.shields.io/badge/Architecture-RAG-orange?style=for-the-badge)](https://aws.amazon.com/what-is/retrieval-augmented-generation/)
 [![Agentic AI](https://img.shields.io/badge/Agentic-Function--Calling-red?style=for-the-badge)](https://ai.google.dev/docs/function_calling)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge&logo=github-actions)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 ---

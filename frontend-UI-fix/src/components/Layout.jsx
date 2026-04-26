@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { AIFloatingWidget } from './AIFloatingWidget';
 
 export function Layout({ children, variant = 'mahasiswa' }) {
   return (
@@ -10,6 +11,7 @@ export function Layout({ children, variant = 'mahasiswa' }) {
       <main className="ml-[260px] mt-[64px] p-6 bg-[#F8F7FF] min-h-screen flex-1">
         {children}
       </main>
+      <AIFloatingWidget />
     </div>
   );
 }

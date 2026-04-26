@@ -72,6 +72,8 @@ func main() {
 
 		// AI Assistant
 		authorized.POST("/ai/advice", handlers.HandleAIAdvice)
+		authorized.POST("/ai/chat", handlers.HandleSmartAssistant)
+		authorized.POST("/ai/analyze-proposal", handlers.HandleProposalAnalysis)
 
 		// WebSocket
 		authorized.GET("/ws", handlers.HandleWebSocket)

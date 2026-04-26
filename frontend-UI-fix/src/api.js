@@ -3,7 +3,7 @@ export const API_BASE_URL = 'http://localhost:8081';
 export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
   const headers = {
-    'Content-Type': 'application/json',
+    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -90,6 +90,23 @@ export const getAIAdvice = (topic, problem) => {
   return apiCall('/api/ai/advice', {
     method: 'POST',
     body: JSON.stringify({ topic, problem }),
+  });
+};
+
+export const askSmartAssistant = (message) => {
+  return apiCall('/api/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+};
+
+export const analyzeProposal = (file) => {
+  const formData = new FormData();
+  formData.append('proposal', file);
+  
+  return apiCall('/api/ai/analyze-proposal', {
+    method: 'POST',
+    body: formData,
   });
 };
 

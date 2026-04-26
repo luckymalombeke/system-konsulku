@@ -11,6 +11,7 @@ const mahasiswaNav = [
   { to: '/mahasiswa/konsultasi-online', icon: MessageSquare, label: 'Konsultasi Online' },
   { to: '/mahasiswa/appointment', icon: Calendar, label: 'Appointment' },
   { to: '/mahasiswa/notifikasi', icon: Bell, label: 'Notifikasi' },
+  { to: '/mahasiswa/proposal-review', icon: BookOpen, label: 'Proposal Review' },
   { to: '/mahasiswa/profil', icon: User, label: 'Profil' },
 ];
 

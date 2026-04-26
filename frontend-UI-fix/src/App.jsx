@@ -14,6 +14,7 @@ import RiwayatAppointment from './pages/mahasiswa/RiwayatAppointment';
 import DetailAppointment from './pages/mahasiswa/DetailAppointment';
 import NotifikasiMahasiswa from './pages/mahasiswa/NotifikasiMahasiswa';
 import ProfilMahasiswa from './pages/mahasiswa/ProfilMahasiswa';
+import ProposalReview from './pages/mahasiswa/ProposalReview';
 
 // Dosen Pages
 import DosenDashboard from './pages/dosen/DosenDashboard';
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/mahasiswa/appointment/:id" element={<DetailAppointment />} />
           <Route path="/mahasiswa/notifikasi" element={<NotifikasiMahasiswa />} />
           <Route path="/mahasiswa/profil" element={<ProfilMahasiswa />} />
+          <Route path="/mahasiswa/proposal-review" element={<ProposalReview />} />
 
           {/* Dosen Routes */}
           <Route path="/dosen/dashboard" element={<DosenDashboard />} />

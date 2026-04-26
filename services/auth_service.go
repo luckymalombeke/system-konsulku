@@ -47,8 +47,8 @@ func (s *authService) Register(user *models.User) error {
 	if user.Role == "dosen" {
 		dosen := models.Dosen{
 			UserID:      user.ID,
-			NamaLengkap: user.Username, // Default pakai username dulu
-			Nip:         "-",
+			NamaLengkap: "Dosen Baru (Belum Diatur)", // Default nama
+			Nip:         user.Username,               // Username biasanya NIP
 		}
 		if err := tx.Create(&dosen).Error; err != nil {
 			tx.Rollback()
@@ -57,8 +57,8 @@ func (s *authService) Register(user *models.User) error {
 	} else {
 		mhs := models.Mahasiswa{
 			UserID:      user.ID,
-			NamaLengkap: user.Username,
-			Nim:         "-",
+			NamaLengkap: "Mahasiswa Baru (Belum Diatur)", // Default nama
+			Nim:         user.Username,                   // Username biasanya NIM
 		}
 		if err := tx.Create(&mhs).Error; err != nil {
 			tx.Rollback()

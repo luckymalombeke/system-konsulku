@@ -21,6 +21,7 @@ type Dosen struct {
 	Pengalaman    string `json:"pengalaman"`
 	Prodi         string `json:"prodi"`
 	IsAvailable   bool   `json:"is_available"`
+	CatatanJadwal string `json:"catatan_jadwal" gorm:"type:text"`
 }
 
 type Mahasiswa struct {

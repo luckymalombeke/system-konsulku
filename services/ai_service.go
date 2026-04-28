@@ -104,8 +104,13 @@ func getLecturerInfoFromDB(name string) string {
 	}
 
 	// Menyusun profil dosen untuk dikembalikan ke AI
-	return fmt.Sprintf("Dosen ditemukan: %s %s. Jabatan: %s. Prodi: %s. Status saat ini: %s. Keahlian/Pengalaman: %s.", 
-		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Jabatan, dosen.Prodi, status, dosen.Pengalaman)
+	catatan := dosen.CatatanJadwal
+	if catatan == "" {
+		catatan = "Tidak ada catatan jadwal spesifik."
+	}
+
+	return fmt.Sprintf("Dosen ditemukan: %s %s. Jabatan: %s. Prodi: %s. Status saat ini: %s. Catatan Jadwal: %s. Keahlian/Pengalaman: %s.", 
+		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Jabatan, dosen.Prodi, status, catatan, dosen.Pengalaman)
 }
 
 // 3. Method baru yang mendemonstrasikan integrasi Agentic Workflow
@@ -116,6 +121,13 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 
 	ctx := context.Background()
 	model := s.client.GenerativeModel("gemini-2.5-flash") // Gunakan model terbaru yang mendukung function calling
+
+	model.SystemInstruction = genai.NewUserContent(genai.Text(
+		"Anda adalah Asisten Akademik Kampus yang ramah dan suportif bernama KonsulKu AI. " +
+		"Tugas Anda adalah membantu mahasiswa berdiskusi tentang perkuliahan, skripsi, magang, dan akademik secara umum. " +
+		"Jika mahasiswa bertanya soal jadwal dosen, gunakan tool yang tersedia. " +
+		"Jika mereka bertanya soal lain (seperti tips magang), jawablah dengan wawasan Anda selayaknya dosen pembimbing yang baik.",
+	))
 
 	// Beritahu model bahwa dia punya "Alat" (Tool)
 	model.Tools = []*genai.Tool{lecturerScheduleTool}

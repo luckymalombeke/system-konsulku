@@ -53,6 +53,8 @@ func HandleUpdateProfile(c *gin.Context) {
 			Prodi         string `json:"prodi"`
 			Bio           string `json:"bio"`
 			Pengalaman    string `json:"pengalaman"`
+			IsAvailable   *bool  `json:"is_available"`
+			CatatanJadwal string `json:"catatan_jadwal"`
 		}
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})

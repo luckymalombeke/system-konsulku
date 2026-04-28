@@ -15,7 +15,8 @@ export default function ProfilDosen() {
     jabatan: '',
     prodi: '',
     bio: '',
-    pengalaman: ''
+    pengalaman: '',
+    catatan_jadwal: ''
   });
 
   const fetchProfile = async () => {
@@ -30,7 +31,8 @@ export default function ProfilDosen() {
         jabatan: data.jabatan || '',
         prodi: data.prodi || '',
         bio: data.bio || '',
-        pengalaman: data.pengalaman || ''
+        pengalaman: data.pengalaman || '',
+        catatan_jadwal: data.catatan_jadwal || ''
       });
     } catch (err) {
       console.error(err);
@@ -61,7 +63,7 @@ export default function ProfilDosen() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Profil Dosen</h1>
         {!isEditing ? (
-          <button 
+          <button
             onClick={() => setIsEditing(true)}
             className="flex items-center gap-2 bg-[#4A1D8F] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#3A1572] transition-colors"
           >
@@ -69,13 +71,13 @@ export default function ProfilDosen() {
           </button>
         ) : (
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setIsEditing(false)}
               className="flex items-center gap-2 bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
             >
               <X size={16} /> Batal
             </button>
-            <button 
+            <button
               onClick={handleSave}
               className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-green-500 transition-colors"
             >
@@ -94,22 +96,22 @@ export default function ProfilDosen() {
 
           {isEditing ? (
             <div className="space-y-3">
-              <input 
+              <input
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center"
                 value={formData.nama_lengkap}
-                onChange={e => setFormData({...formData, nama_lengkap: e.target.value})}
+                onChange={e => setFormData({ ...formData, nama_lengkap: e.target.value })}
                 placeholder="Nama Lengkap"
               />
-              <input 
+              <input
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center"
                 value={formData.nip}
-                onChange={e => setFormData({...formData, nip: e.target.value})}
+                onChange={e => setFormData({ ...formData, nip: e.target.value })}
                 placeholder="NIP"
               />
-              <input 
+              <input
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-center"
                 value={formData.gelar_belakang}
-                onChange={e => setFormData({...formData, gelar_belakang: e.target.value})}
+                onChange={e => setFormData({ ...formData, gelar_belakang: e.target.value })}
                 placeholder="Gelar (Contoh: PhD)"
               />
             </div>
@@ -122,14 +124,14 @@ export default function ProfilDosen() {
 
           <div className="text-sm text-[#4A1D8F] font-medium mt-2">{profile?.prodi || 'Program Studi'}</div>
           <div className="text-sm text-gray-500 mt-0.5">{profile?.jabatan || 'Jabatan'}</div>
-          
+
           <div className="mt-4 pt-4 border-t border-gray-50 text-left">
             <div className="text-[10px] text-gray-400 uppercase font-bold mb-2 tracking-widest text-center">Biografi / Pengenalan</div>
             {isEditing ? (
-              <textarea 
+              <textarea
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm h-32 resize-none"
                 value={formData.bio}
-                onChange={e => setFormData({...formData, bio: e.target.value})}
+                onChange={e => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Tuliskan biografi singkat Anda..."
               />
             ) : (
@@ -148,10 +150,10 @@ export default function ProfilDosen() {
               <div>
                 <label className="text-[10px] text-gray-400 uppercase font-bold mb-1 block">Jabatan</label>
                 {isEditing ? (
-                  <input 
+                  <input
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                     value={formData.jabatan}
-                    onChange={e => setFormData({...formData, jabatan: e.target.value})}
+                    onChange={e => setFormData({ ...formData, jabatan: e.target.value })}
                   />
                 ) : (
                   <div className="text-sm font-medium text-gray-900">{profile?.jabatan || '-'}</div>
@@ -160,10 +162,10 @@ export default function ProfilDosen() {
               <div>
                 <label className="text-[10px] text-gray-400 uppercase font-bold mb-1 block">Fakultas / Prodi</label>
                 {isEditing ? (
-                  <input 
+                  <input
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                     value={formData.prodi}
-                    onChange={e => setFormData({...formData, prodi: e.target.value})}
+                    onChange={e => setFormData({ ...formData, prodi: e.target.value })}
                   />
                 ) : (
                   <div className="text-sm font-medium text-gray-900">{profile?.prodi || '-'}</div>
@@ -175,10 +177,10 @@ export default function ProfilDosen() {
           <div className="card">
             <h3 className="font-semibold text-gray-900 mb-4">Pengalaman & Riset</h3>
             {isEditing ? (
-              <textarea 
+              <textarea
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm h-32 resize-none focus:ring-2 focus:ring-[#4A1D8F] outline-none"
                 value={formData.pengalaman}
-                onChange={e => setFormData({...formData, pengalaman: e.target.value})}
+                onChange={e => setFormData({ ...formData, pengalaman: e.target.value })}
                 placeholder="Tuliskan pengalaman mengajar, penelitian, atau publikasi Anda..."
               />
             ) : (
@@ -189,10 +191,26 @@ export default function ProfilDosen() {
           </div>
 
           <div className="card">
+            <h3 className="font-semibold text-gray-900 mb-4">Informasi Jadwal / Ketersediaan Waktu (MVP)</h3>
+            {isEditing ? (
+              <textarea
+                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm h-24 resize-none focus:ring-2 focus:ring-[#4A1D8F] outline-none"
+                value={formData.catatan_jadwal}
+                onChange={e => setFormData({ ...formData, catatan_jadwal: e.target.value })}
+                placeholder="Contoh: Saya berada di kampus hari Senin dan Rabu jam 09.00 - 14.00."
+              />
+            ) : (
+              <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                {profile?.catatan_jadwal || 'Belum ada catatan jadwal. Mahasiswa hanya melihat status Tersedia/Tidak.'}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
             <h3 className="font-semibold text-gray-900 mb-3">Keamanan & Akun</h3>
             <div className="flex flex-col gap-3">
               <div className="text-xs text-gray-500">Email: <span className="font-bold text-gray-900">{profile?.user?.email}</span></div>
-              <button 
+              <button
                 onClick={() => logout()}
                 className="w-fit border border-red-200 text-red-600 rounded-xl px-5 py-2 text-sm font-bold hover:bg-red-50 transition-colors"
               >

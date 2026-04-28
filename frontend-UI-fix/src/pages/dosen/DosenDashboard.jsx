@@ -5,7 +5,7 @@ import { StatCard } from '../../components/StatCard';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Users, MessageSquare, Calendar, CheckCircle, Activity } from 'lucide-react';
-import { getAppointments } from '../../api';
+import { getAppointments, updateProfile } from '../../api';
 
 export default function DosenDashboard() {
   const [tersedia, setTersedia] = useState(true);
@@ -32,6 +32,19 @@ export default function DosenDashboard() {
     }
     fetchDashboardData();
   }, []);
+
+  const handleToggleTersedia = async () => {
+    const statusBaru = !tersedia;
+    setTersedia(statusBaru);
+    
+    try {
+      await updateProfile({ is_available: statusBaru });
+    } catch (err) {
+      console.error("Gagal update status", err);
+      setTersedia(!statusBaru);
+      alert("Gagal menyimpan status ke server!");
+    }
+  };
 
   // Hitung Statistik Real
   const pendingCount = appointments.filter(a => a.status === 'Pending' || a.status === 'pending').length;
@@ -63,7 +76,7 @@ export default function DosenDashboard() {
             <div className="text-white/60 text-xs">untuk konsultasi</div>
           </div>
           <button
-            onClick={() => setTersedia(!tersedia)}
+            onClick={handleToggleTersedia}
             className={`relative w-12 h-6 rounded-full transition-colors ${tersedia ? 'bg-green-400' : 'bg-gray-500'}`}
             id="toggle-tersedia"
           >

@@ -4,13 +4,14 @@ import { Layout } from '../../components/Layout';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
 import { ChevronLeft, Clock, Calendar, Check, Paperclip } from 'lucide-react';
-import { getAppointmentByID } from '../../api';
+import { getAppointmentByID, completeAppointment } from '../../api';
 
 export default function DosenDetailAppointment() {
   const { id } = useParams();
   const [appointment, setAppointment] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [catatan, setCatatan] = useState('');
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -45,12 +46,34 @@ export default function DosenDetailAppointment() {
     lampiran: 'Tidak ada lampiran',
   };
 
-  const timeline = [
-    { label: 'Request Dikirim', date: appointment.CreatedAt?.split('T')[0] || '-', done: true },
-    { label: 'Dosen Merespons', date: appointment.status === 'Pending' ? 'Belum direspons' : 'Sudah direspons', done: appointment.status !== 'Pending' },
-    { label: 'Jadwal Dikonfirmasi', date: appointment.status === 'Accepted' ? 'Terkonfirmasi' : '-', done: appointment.status === 'Accepted' },
-    { label: 'Konsultasi Selesai', date: '-', done: appointment.status === 'Selesai' },
-  ];
+  const timeline = [];
+  timeline.push({ label: 'Request Dikirim', date: appointment.CreatedAt?.split('T')[0] || '-', done: true });
+
+  if (appointment.status === 'cancelled') {
+    timeline.push({ label: 'Dibatalkan Mahasiswa', date: appointment.UpdatedAt?.split('T')[0] || '-', done: true });
+  } else if (appointment.status === 'rejected') {
+    timeline.push({ label: 'Ditolak', date: appointment.UpdatedAt?.split('T')[0] || '-', done: true });
+  } else {
+    const isPending = appointment.status === 'pending' || appointment.status === 'Menunggu';
+    const isAccepted = appointment.status === 'Accepted' || appointment.status === 'Selesai';
+    const isDone = appointment.status === 'Selesai';
+
+    timeline.push({ 
+      label: 'Dosen Merespons', 
+      date: isPending ? 'Belum direspons' : 'Sudah direspons', 
+      done: !isPending 
+    });
+    timeline.push({ 
+      label: 'Jadwal Dikonfirmasi', 
+      date: isAccepted ? 'Terkonfirmasi' : '-', 
+      done: isAccepted 
+    });
+    timeline.push({ 
+      label: 'Konsultasi Selesai', 
+      date: isDone ? appointment.UpdatedAt?.split('T')[0] : '-', 
+      done: isDone 
+    });
+  }
   return (
     <Layout variant="dosen">
       <div className="mb-5">
@@ -136,17 +159,30 @@ export default function DosenDetailAppointment() {
 
           {/* Actions */}
           <div className="border-t border-gray-100 pt-5 space-y-3">
-            <button className="w-full bg-[#059669] text-white rounded-lg py-2.5 font-semibold hover:bg-green-700 transition-colors" id="btn-tandai-selesai">
+            <button 
+              onClick={async () => {
+                try {
+                  await completeAppointment(id, catatan);
+                  alert("Konsultasi berhasil ditandai selesai!");
+                  window.location.reload();
+                } catch(err) {
+                  alert("Gagal: " + err.message);
+                }
+              }}
+              className="w-full bg-[#059669] text-white rounded-lg py-2.5 font-semibold hover:bg-green-700 transition-colors" id="btn-tandai-selesai"
+            >
               Tandai Selesai
             </button>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Catat Hasil Konsultasi</label>
               <textarea
-                className="input-field resize-none h-24"
+                value={catatan}
+                onChange={(e) => setCatatan(e.target.value)}
+                className="input-field resize-none h-24 w-full border border-gray-200 rounded p-2"
                 placeholder="Tulis catatan hasil konsultasi untuk mahasiswa..."
               />
             </div>
-            <button className="w-full btn-outlined" id="btn-simpan-catatan">
+            <button className="w-full btn-outlined" id="btn-simpan-catatan" onClick={() => alert("Gunakan tombol Tandai Selesai untuk menyimpan catatan dan menyelesaikan appointment sekaligus.")}>
               Simpan Catatan
             </button>
           </div>

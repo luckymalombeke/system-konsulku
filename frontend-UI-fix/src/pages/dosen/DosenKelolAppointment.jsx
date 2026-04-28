@@ -5,7 +5,7 @@ import { StatCard } from '../../components/StatCard';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Clock, X, Calendar as CalendarIcon, CheckCircle } from 'lucide-react';
-import { getAppointments, rejectAppointment } from '../../api';
+import { getAppointments, rejectAppointment, acceptAppointment } from '../../api';
 
 export default function DosenKelolAppointment() {
   const [activeTab, setActiveTab] = useState('Pending');
@@ -150,7 +150,18 @@ export default function DosenKelolAppointment() {
                     >
                       Tolak
                     </button>
-                    <button className="bg-[#4A1D8F] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-[#3A1572] transition-colors shadow-lg shadow-[#4A1D8F]/20">
+                    <button 
+                      onClick={async () => {
+                        try {
+                          await acceptAppointment(req.id);
+                          alert("Berhasil menerima request!");
+                          fetchApts();
+                        } catch(err) {
+                          alert("Gagal: " + err.message);
+                        }
+                      }}
+                      className="bg-[#4A1D8F] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-[#3A1572] transition-colors shadow-lg shadow-[#4A1D8F]/20"
+                    >
                       Terima Request
                     </button>
                   </div>

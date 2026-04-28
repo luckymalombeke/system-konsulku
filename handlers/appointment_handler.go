@@ -29,13 +29,31 @@ func HandleCreateAppointment(c *gin.Context) {
 		return
 	}
 
-	var input models.Appointment
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var req struct {
+		DosenID        uint   `json:"dosen_id" binding:"required"`
+		Topik          string `json:"topik" binding:"required"`
+		Deskripsi      string `json:"deskripsi"`
+		TanggalRequest string `json:"tanggal_request" binding:"required"`
+		JamRequest     string `json:"jam_request" binding:"required"`
+		Jenis          string `json:"jenis"`
+		Status         string `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
-	input.MahasiswaID = mhs.ID
+	input := models.Appointment{
+		MahasiswaID:    mhs.ID,
+		DosenID:        req.DosenID,
+		Topik:          req.Topik,
+		Deskripsi:      req.Deskripsi,
+		TanggalRequest: req.TanggalRequest,
+		JamRequest:     req.JamRequest,
+		Jenis:          req.Jenis,
+		Status:         req.Status,
+	}
 	if err := apptService.CreateBooking(&input); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, Link } from 'react-router-dom';
 import { Sidebar } from '../../components/Sidebar';
 import { Topbar } from '../../components/Topbar';
 import { Send, User, MessageSquare, ChevronLeft } from 'lucide-react';
@@ -7,9 +7,15 @@ import { getMessages, API_BASE_URL } from '../../api';
 
 export default function DosenChatPage() {
   const { id: targetUserID } = useParams();
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [targetUser, setTargetUser] = useState(null);
+  
+  // Ambil state mhs dari navigasi DosenInboxChat jika ada
+  const mhsData = location.state?.mhs;
+  const targetUserName = mhsData?.nama_lengkap || `Mahasiswa (ID: ${targetUserID})`;
+  const targetNim = mhsData?.nim || '';
+
   const scrollRef = useRef();
 
   // Load pesan & info mahasiswa
@@ -17,11 +23,8 @@ export default function DosenChatPage() {
     const fetchChatData = async () => {
       try {
         const msgData = await getMessages(targetUserID);
+        console.log("FETCHED MSG DATA:", msgData);
         setMessages(msgData || []);
-        
-        // Sebagai dosen, kita tidak punya getMahasiswaList, 
-        // tapi kita bisa asumsikan target adalah mahasiswa yang mengirim pesan
-        // Untuk sementara kita biarkan nama default dulu
       } catch (err) {
         console.error("Gagal load chat:", err);
       }
@@ -92,7 +95,8 @@ export default function DosenChatPage() {
                 <User size={20} />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900">Mahasiswa (ID: {targetUserID})</h2>
+                <h2 className="font-bold text-gray-900">{targetUserName}</h2>
+                {targetNim && <p className="text-xs text-gray-500 mb-0.5">NIM: {targetNim}</p>}
                 <p className="text-xs text-green-500 flex items-center gap-1">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span> Active
                 </p>

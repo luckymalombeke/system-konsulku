@@ -85,3 +85,30 @@ func HandleCancelAppointment(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Appointment berhasil dibatalkan"})
 }
+
+func HandleAcceptAppointment(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	apptIDStr := c.Param("id")
+	apptID, _ := strconv.Atoi(apptIDStr)
+	if err := notifService.AcceptAppointment(uint(apptID), userID); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Appointment berhasil diterima"})
+}
+
+func HandleCompleteAppointment(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	apptIDStr := c.Param("id")
+	apptID, _ := strconv.Atoi(apptIDStr)
+	var input struct {
+		Catatan string `json:"catatan"`
+	}
+	c.ShouldBindJSON(&input)
+	if err := notifService.CompleteAppointment(uint(apptID), userID, input.Catatan); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Konsultasi selesai"})
+}
+

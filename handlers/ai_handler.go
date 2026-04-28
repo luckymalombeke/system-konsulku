@@ -1,9 +1,14 @@
 package handlers
 
 import (
+	"archive/zip"
+	"bytes"
+	"encoding/xml"
+	"fmt"
 	"io"
 	"konsulku/services"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -75,6 +80,41 @@ func HandleSmartAssistant(c *gin.Context) {
 	})
 }
 
+// Ekstraktor teks dari file .docx (membaca word/document.xml)
+func extractTextFromDocx(content []byte) (string, error) {
+	reader, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		return "", err
+	}
+
+	for _, f := range reader.File {
+		if f.Name == "word/document.xml" {
+			rc, err := f.Open()
+			if err != nil {
+				return "", err
+			}
+			defer rc.Close()
+			
+			xmlData, _ := io.ReadAll(rc)
+			
+			var textBuf bytes.Buffer
+			decoder := xml.NewDecoder(bytes.NewReader(xmlData))
+			for {
+				t, err := decoder.Token()
+				if err != nil {
+					break
+				}
+				if chardata, ok := t.(xml.CharData); ok {
+					textBuf.Write(chardata)
+					textBuf.WriteString(" ")
+				}
+			}
+			return textBuf.String(), nil
+		}
+	}
+	return "", fmt.Errorf("file word/document.xml tidak ditemukan di dalam .docx")
+}
+
 // HandleProposalAnalysis menangani upload file proposal mahasiswa
 func HandleProposalAnalysis(c *gin.Context) {
 	file, header, err := c.Request.FormFile("proposal")
@@ -91,9 +131,27 @@ func HandleProposalAnalysis(c *gin.Context) {
 		return
 	}
 
+	var extractedText string
+	filenameLower := strings.ToLower(header.Filename)
+
+	if strings.HasSuffix(filenameLower, ".docx") {
+		text, err := extractTextFromDocx(content)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "File .docx tidak valid atau rusak"})
+			return
+		}
+		extractedText = text
+	} else if strings.HasSuffix(filenameLower, ".pdf") || strings.HasSuffix(filenameLower, ".doc") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format PDF/DOC belum didukung saat ini. Mohon gunakan .docx atau .txt"})
+		return
+	} else {
+		// Asumsi format .txt atau format teks lainnya
+		extractedText = string(content)
+	}
+
 	// Panggil Service
 	service := GetAIService()
-	analysis, err := service.AnalyzeProposal(header.Filename, string(content))
+	analysis, err := service.AnalyzeProposal(header.Filename, extractedText)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -104,3 +162,4 @@ func HandleProposalAnalysis(c *gin.Context) {
 		"analysis": analysis,
 	})
 }
+

@@ -151,3 +151,46 @@ func (s *NotificationService) CancelAppointment(apptID uint, mahasiswaUserID uin
 	return nil
 
 }
+
+func (s *NotificationService) AcceptAppointment(apptID uint, dosenUserID uint) error {
+	appt, err := s.ApptRepo.FindByID(apptID)
+	if err != nil {
+		return errors.New("appointment tidak ditemukan")
+	}
+	dsn, err := s.UserRepo.FindDosenByUserID(dosenUserID)
+	if err != nil || appt.DosenID != dsn.ID {
+		return errors.New("unauthorized")
+	}
+	appt.Status = "Accepted"
+	if err := s.ApptRepo.Save(appt); err != nil {
+		return err
+	}
+	mhs, _ := s.UserRepo.FindMahasiswaByID(appt.MahasiswaID)
+	notif := &models.Notifikasi{
+		UserID: mhs.UserID, Judul: "Appointment Diterima", Pesan: "Dosen telah menerima appointment Anda.", Tipe: "appointment_accepted", ReferensiID: appt.ID,
+	}
+	s.Repo.Create(notif)
+	return nil
+}
+
+func (s *NotificationService) CompleteAppointment(apptID uint, dosenUserID uint, catatan string) error {
+	appt, err := s.ApptRepo.FindByID(apptID)
+	if err != nil {
+		return errors.New("appointment tidak ditemukan")
+	}
+	dsn, err := s.UserRepo.FindDosenByUserID(dosenUserID)
+	if err != nil || appt.DosenID != dsn.ID {
+		return errors.New("unauthorized")
+	}
+	appt.Status = "Selesai"
+	appt.CatatanHasil = &catatan
+	if err := s.ApptRepo.Save(appt); err != nil {
+		return err
+	}
+	mhs, _ := s.UserRepo.FindMahasiswaByID(appt.MahasiswaID)
+	notif := &models.Notifikasi{
+		UserID: mhs.UserID, Judul: "Konsultasi Selesai", Pesan: "Dosen telah menandai konsultasi selesai.", Tipe: "appointment_completed", ReferensiID: appt.ID,
+	}
+	s.Repo.Create(notif)
+	return nil
+}

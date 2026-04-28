@@ -13,19 +13,19 @@ func (r *AppointmentRepo) Create(appt *models.Appointment) error {
 
 func (r *AppointmentRepo) GetAllForDosen(dosenID uint) ([]models.Appointment, error) {
 	var appts []models.Appointment
-	err := config.DB.Joins("Mahasiswa").Preload("Mahasiswa.User").Where("dosen_id = ?", dosenID).Find(&appts).Error
+	err := config.DB.Preload("Mahasiswa.User").Preload("Mahasiswa").Where("dosen_id = ?", dosenID).Find(&appts).Error
 	return appts, err
 }
 
 func (r *AppointmentRepo) GetAllForMahasiswa(mahasiswaID uint) ([]models.Appointment, error) {
 	var appts []models.Appointment
-	err := config.DB.Joins("Dosen").Preload("Dosen.User").Where("mahasiswa_id = ?", mahasiswaID).Find(&appts).Error
+	err := config.DB.Preload("Dosen.User").Preload("Dosen").Where("mahasiswa_id = ?", mahasiswaID).Find(&appts).Error
 	return appts, err
 }
 
 func (r *AppointmentRepo) FindByID(id uint) (*models.Appointment, error) {
 	var appt models.Appointment
-	err := config.DB.First(&appt, id).Error
+	err := config.DB.Preload("Dosen.User").Preload("Dosen").Preload("Mahasiswa.User").Preload("Mahasiswa").First(&appt, id).Error
 	return &appt, err
 }
 

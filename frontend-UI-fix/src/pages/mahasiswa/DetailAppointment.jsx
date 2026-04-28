@@ -44,12 +44,34 @@ export default function DetailAppointment() {
     lampiran: 'Tidak ada lampiran',
   };
 
-  const timeline = [
-    { label: 'Request Dikirim', date: appointment.CreatedAt?.split('T')[0] || '-', done: true },
-    { label: 'Dosen Merespons', date: appointment.status === 'Pending' ? 'Menunggu respons dosen...' : 'Sudah direspons', done: appointment.status !== 'Pending' },
-    { label: 'Jadwal Dikonfirmasi', date: appointment.status === 'Accepted' ? 'Terkonfirmasi' : '-', done: appointment.status === 'Accepted' },
-    { label: 'Konsultasi Selesai', date: '-', done: appointment.status === 'Selesai' },
-  ];
+  const timeline = [];
+  timeline.push({ label: 'Request Dikirim', date: appointment.CreatedAt?.split('T')[0] || '-', done: true });
+
+  if (appointment.status === 'cancelled') {
+    timeline.push({ label: 'Dibatalkan', date: appointment.UpdatedAt?.split('T')[0] || '-', done: true });
+  } else if (appointment.status === 'rejected') {
+    timeline.push({ label: 'Ditolak oleh Dosen', date: appointment.UpdatedAt?.split('T')[0] || '-', done: true });
+  } else {
+    const isPending = appointment.status === 'pending' || appointment.status === 'Menunggu';
+    const isAccepted = appointment.status === 'Accepted' || appointment.status === 'Selesai';
+    const isDone = appointment.status === 'Selesai';
+
+    timeline.push({ 
+      label: 'Dosen Merespons', 
+      date: isPending ? 'Menunggu respons dosen...' : 'Sudah direspons', 
+      done: !isPending 
+    });
+    timeline.push({ 
+      label: 'Jadwal Dikonfirmasi', 
+      date: isAccepted ? 'Terkonfirmasi' : '-', 
+      done: isAccepted 
+    });
+    timeline.push({ 
+      label: 'Konsultasi Selesai', 
+      date: isDone ? appointment.UpdatedAt?.split('T')[0] : '-', 
+      done: isDone 
+    });
+  }
   return (
     <Layout variant="mahasiswa">
       <div className="mb-5">
@@ -134,15 +156,17 @@ export default function DetailAppointment() {
             </div>
           </div>
 
-          {/* Reschedule Proposal (shown for demonstration) */}
-          <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-            <div className="text-sm font-semibold text-orange-700 mb-1">Usulan Reschedule</div>
-            <p className="text-xs text-orange-600 mb-3">Dosen mengusulkan jadwal baru: <strong>22 April 2025, 10:00 WITA</strong></p>
-            <div className="flex gap-2">
-              <button className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700 transition-colors" id="btn-setuju">Setuju</button>
-              <button className="flex-1 border border-red-400 text-red-600 rounded-lg py-2 text-sm font-medium hover:bg-red-50 transition-colors" id="btn-tolak">Tolak</button>
+          {/* Reschedule Proposal */}
+          {appointment.status === 'Reschedule' && appointment.reschedule_tanggal && (
+            <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <div className="text-sm font-semibold text-orange-700 mb-1">Usulan Reschedule</div>
+              <p className="text-xs text-orange-600 mb-3">Dosen mengusulkan jadwal baru: <strong>{appointment.reschedule_tanggal}, {appointment.reschedule_jam} WITA</strong></p>
+              <div className="flex gap-2">
+                <button className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-700 transition-colors" id="btn-setuju">Setuju</button>
+                <button className="flex-1 border border-red-400 text-red-600 rounded-lg py-2 text-sm font-medium hover:bg-red-50 transition-colors" id="btn-tolak">Tolak</button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </Layout>

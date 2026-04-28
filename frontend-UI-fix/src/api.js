@@ -54,6 +54,13 @@ export const updateProfile = (data) => {
   });
 };
 
+export const createAppointment = (data) => {
+  return apiCall('/api/appointment', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
 export const getAppointments = () => {
   return apiCall('/api/appointment', {
     method: 'GET',
@@ -77,6 +84,19 @@ export const rejectAppointment = (id, alasan) => {
   return apiCall(`/api/appointment/${id}/reject`, {
     method: 'PUT',
     body: JSON.stringify({ alasan }),
+  });
+};
+
+export const acceptAppointment = (id) => {
+  return apiCall(`/api/appointment/${id}/accept`, {
+    method: 'PUT',
+  });
+};
+
+export const completeAppointment = (id, catatan) => {
+  return apiCall(`/api/appointment/${id}/complete`, {
+    method: 'PUT',
+    body: JSON.stringify({ catatan }),
   });
 };
 

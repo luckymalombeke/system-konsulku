@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '../../components/Layout';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
 import { Check, ChevronLeft, ChevronRight, Upload, Calendar, Clock, X, Sparkles, Loader2 } from 'lucide-react';
-import { getDosenList, getAIAdvice } from '../../api';
+import { getDosenList, getAIAdvice, createAppointment } from '../../api';
 
 const dosenOptions = [
   { id: 1, name: 'Stenly R. Pungus, S.Kom., MT., M.M., PhD', prodi: 'Sistem Informasi', skills: ['Machine Learning', 'Data Science'], available: true },
@@ -52,6 +52,29 @@ export default function BuatAppointment() {
   const [problem, setProblem] = useState("Saya memiliki beberapa pertanyaan terkait metode pengumpulan data yang tepat untuk penelitian saya. Penelitian saya menggunakan pendekatan kuantitatif dengan responden mahasiswa aktif. Saya ingin mendiskusikan apakah metode survei atau eksperimen yang lebih cocok.");
   const [aiAdvice, setAiAdvice] = useState("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitAppointment = async () => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        dosen_id: selectedDosen,
+        topik: topic,
+        deskripsi: problem,
+        tanggal_request: `2025-04-${selectedDate.toString().padStart(2, '0')}`,
+        jam_request: selectedTime,
+        jenis: "Tatap Muka",
+        status: "Menunggu"
+      };
+      await createAppointment(payload);
+      setSuccess(true);
+    } catch (err) {
+      console.error(err);
+      alert('Gagal membuat appointment: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleGetAIAdvice = async () => {
     if (!topic || !problem) return;
@@ -394,12 +417,12 @@ export default function BuatAppointment() {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { label: 'Dosen', value: 'Stenly R. Pungus, S.Kom., MT., M.M., PhD' },
-                  { label: 'Prodi Dosen', value: 'Sistem Informasi' },
-                  { label: 'Tanggal', value: '21 April 2025 (Senin)' },
+                  { label: 'Dosen', value: dosenList.find(d => d.id === selectedDosen)?.nama_lengkap || 'Belum dipilih' },
+                  { label: 'Prodi Dosen', value: dosenList.find(d => d.id === selectedDosen)?.prodi || '-' },
+                  { label: 'Tanggal', value: `${selectedDate} April 2025` },
                   { label: 'Jam', value: `${selectedTime} WITA` },
-                  { label: 'Topik', value: 'Pembahasan metodologi dan analisis data skripsi' },
-                  { label: 'Lampiran', value: 'Draft_Bab3_Andi.pdf' },
+                  { label: 'Topik', value: topic || 'Belum ada topik' },
+                  { label: 'Lampiran', value: 'Tidak ada lampiran' },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div className="text-xs text-gray-500 mb-0.5">{label}</div>
@@ -441,12 +464,13 @@ export default function BuatAppointment() {
           </button>
         ) : (
           <button
-            onClick={() => setSuccess(true)}
-            className="bg-[#059669] text-white rounded-lg py-2 px-5 font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
+            onClick={handleSubmitAppointment}
+            disabled={isSubmitting}
+            className={`text-white rounded-lg py-2 px-5 font-semibold transition-colors flex items-center gap-2 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#059669] hover:bg-green-700'}`}
             id="btn-kirim-request"
           >
-            <Check size={16} />
-            Kirim Request
+            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+            {isSubmitting ? 'Mengirim...' : 'Kirim Request'}
           </button>
         )}
       </div>

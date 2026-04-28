@@ -32,7 +32,7 @@ func main() {
 
 	// AutoMigrate: otomatis tambahkan kolom/tabel yang belum ada di database
 	fmt.Println("Sedang menyelaraskan database...")
-	errMigrate := config.DB.AutoMigrate(&models.User{}, &models.Dosen{}, &models.Mahasiswa{}, &models.Appointment{})
+	errMigrate := config.DB.AutoMigrate(&models.User{}, &models.Dosen{}, &models.Mahasiswa{}, &models.Appointment{}, &models.Notifikasi{}, &models.KonsultasiChat{}, &models.Pesan{})
 	if errMigrate != nil {
 		fmt.Println("Gagal migrasi database:", errMigrate)
 	} else {
@@ -62,6 +62,8 @@ func main() {
 		authorized.GET("/appointment/:id", handlers.HandleGetAppointmentByID)
 		authorized.PUT("/appointment/:id/reject", handlers.HandleRejectAppointment)
 		authorized.PUT("/appointment/:id/cancel", handlers.HandleCancelAppointment)
+		authorized.PUT("/appointment/:id/accept", handlers.HandleAcceptAppointment)
+		authorized.PUT("/appointment/:id/complete", handlers.HandleCompleteAppointment)
 		
 		// Chat
 		authorized.POST("/chat", handlers.HandleSendMessage)
@@ -85,5 +87,8 @@ func main() {
 	}
 
 	fmt.Printf("Server KonsulKu Jalan di :%s\n", port)
-	r.Run(":" + port)
+	err = r.Run(":" + port)
+	if err != nil {
+		fmt.Println("SERVER ERROR KELUAR:", err)
+	}
 }

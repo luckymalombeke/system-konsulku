@@ -187,7 +187,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	}
 
 	ctx := context.Background()
-	model := s.client.GenerativeModel("gemini-2.0-flash-lite")
+	model := s.client.GenerativeModel("gemini-2.5-flash")
 
 	prompt := fmt.Sprintf(`
 		Anda adalah Reviewer Akademik Profesional.

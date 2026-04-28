@@ -88,6 +88,19 @@ graph LR
 
 ---
 
+## 🚀 AI-Assisted Engineering & Leadership
+
+This project showcases modern **Software Engineering Leadership**. While the codebase was co-authored with an Advanced AI Assistant, the **Architecture, Debugging Direction, and Problem Solving** were strictly human-led. Key highlights of this human-AI collaboration include:
+
+- **System Architecture & Vision:** Architecting the end-to-end flow from React frontend to Go backend, integrating MySQL, WebSockets, and Google Gemini API.
+- **Complex Debugging:** Successfully directing the AI to resolve deep OS-level networking blocks (e.g., Windows socket/port binding issues) and identifying logic gaps in WebSocket payload delivery.
+- **Advanced Problem Solving:** When the Gemini API rejected binary `.docx` files with "invalid UTF-8" errors, the AI was guided to build a native Go `archive/zip` and `encoding/xml` parser to extract raw text, completely bypassing external dependencies.
+- **Iterative Refinement:** Designing the state management flow in React Router to dynamically pass student profiles between components, transforming static mockups into a fully functional, data-driven Chat UI.
+
+This project proves the ability to not just write code, but to **lead, manage, and orchestrate** advanced AI tools to build enterprise-grade applications.
+
+---
+
 ## 🏗️ System Architecture & Technical Decisions
 
 - **Go (Gin)**: High-performance backend with efficient concurrency handling.

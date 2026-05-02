@@ -41,7 +41,7 @@ export default function DetailAppointment() {
     jam: appointment.jam_request,
     jenis: appointment.jenis || 'Offline',
     status: appointment.status,
-    lampiran: 'Tidak ada lampiran',
+    lampiran: appointment.lampiran_url ? appointment.lampiran_url : null,
   };
 
   const timeline = [];
@@ -125,10 +125,21 @@ export default function DetailAppointment() {
 
           <div>
             <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Lampiran</div>
-            <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3 w-fit">
-              <Paperclip size={16} className="text-[#4A1D8F]" />
-              <span className="text-sm text-[#4A1D8F] font-medium">{detailData.lampiran}</span>
-            </div>
+            {detailData.lampiran ? (
+              <a 
+                href={`http://localhost:8081${detailData.lampiran}`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="flex items-center gap-3 border border-[#4A1D8F]/20 bg-[#F0E9FF]/50 hover:bg-[#F0E9FF] rounded-lg p-3 w-fit cursor-pointer transition-colors"
+              >
+                <Paperclip size={16} className="text-[#4A1D8F]" />
+                <span className="text-sm text-[#4A1D8F] font-medium underline">Buka Lampiran File</span>
+              </a>
+            ) : (
+              <div className="flex items-center gap-3 border border-gray-200 bg-gray-50 rounded-lg p-3 w-fit">
+                <span className="text-sm text-gray-400 font-medium">Tidak ada lampiran</span>
+              </div>
+            )}
           </div>
         </div>
 

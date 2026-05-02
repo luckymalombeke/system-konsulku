@@ -1,13 +1,36 @@
 import React from 'react';
 import { User } from 'lucide-react';
 
-export function AvatarPlaceholder({ size = 40, className = '' }) {
+export function AvatarPlaceholder({ size = 40, className = '', src = null }) {
+  // Pastikan src bukan string kosong atau "null"
+  const hasImage = src && src !== "" && src !== "null";
+
+  if (hasImage) {
+    const fullSrc = src.startsWith('http') ? src : `http://localhost:8081${src}`;
+    return (
+      <div 
+        className={`rounded-full overflow-hidden border-2 border-gray-100 flex-shrink-0 ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={fullSrc}
+          alt="Profile"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://ui-avatars.com/api/?name=User&background=random';
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 ${className}`}
+      className={`rounded-full bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 ${className}`}
       style={{ width: size, height: size }}
     >
-      <User size={size * 0.5} className="text-gray-400" />
+      <User size={size * 0.5} className="text-gray-300" />
     </div>
   );
 }

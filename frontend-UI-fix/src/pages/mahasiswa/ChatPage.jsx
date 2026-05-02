@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/Sidebar';
 import { Topbar } from '../../components/Topbar';
-import { Send, User, MessageSquare } from 'lucide-react';
-import { getMessages, getDosenList, login } from '../../api'; // Pastikan API ini ada
+import { Send, User, MessageSquare, MoreVertical, Edit2, Trash2, X } from 'lucide-react';
+import { getMessages, getDosenList, login, editMessage, deleteMessage } from '../../api'; // Pastikan API ini ada
 
 export default function ChatPage() {
   const { id: targetUserID } = useParams();
@@ -11,6 +11,8 @@ export default function ChatPage() {
   const [inputText, setInputText] = useState('');
   const [targetUser, setTargetUser] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [activeMenuId, setActiveMenuId] = useState(null);
   const scrollRef = useRef();
 
   // Load pesan awal dari database
@@ -35,8 +37,10 @@ export default function ChatPage() {
   useEffect(() => {
     const handleWsMessage = (e) => {
       const data = e.detail;
-      if (data.type === 'NEW_CHAT' && (data.payload.pengirim_id === parseInt(targetUserID) || data.payload.target_user_id === parseInt(targetUserID))) {
+      if (data.type === 'NEW_CHAT') {
         setMessages((prev) => [...prev, data.payload]);
+      } else if (data.type === 'MESSAGE_EDITED' || data.type === 'MESSAGE_DELETED') {
+        setMessages((prev) => prev.map(m => m.id === data.payload.id ? data.payload : m));
       }
     };
 
@@ -53,6 +57,18 @@ export default function ChatPage() {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    if (editingMessageId) {
+      try {
+        await editMessage(editingMessageId, inputText);
+        setMessages((prev) => prev.map(m => m.id === editingMessageId ? { ...m, teks: inputText, diedit: true } : m));
+        setEditingMessageId(null);
+        setInputText('');
+      } catch (err) {
+        console.error("Gagal edit pesan:", err);
+      }
+      return;
+    }
+
     try {
       // Panggil API Send Message
       const token = localStorage.getItem('token');
@@ -66,18 +82,24 @@ export default function ChatPage() {
       });
 
       if (res.ok) {
-        const user = JSON.parse(localStorage.getItem('user'));
-        // Tambahkan ke UI lokal dulu biar instan
-        const newMsg = {
-          pengirim_id: user.id,
-          teks: inputText,
-          created_at: new Date().toISOString()
-        };
-        setMessages((prev) => [...prev, newMsg]);
+        const responseData = await res.json();
+        // Menggunakan data pesan asli dari server agar ID-nya terbaca
+        setMessages((prev) => [...prev, responseData.data]);
         setInputText('');
       }
     } catch (err) {
       console.error("Gagal kirim pesan:", err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Yakin ingin menghapus pesan ini?")) return;
+    try {
+      await deleteMessage(id);
+      setMessages((prev) => prev.map(m => m.id === id ? { ...m, teks: "Pesan ini telah dihapus", dihapus: true } : m));
+      setActiveMenuId(null);
+    } catch (err) {
+      console.error("Gagal hapus pesan:", err);
     }
   };
 
@@ -126,13 +148,39 @@ export default function ChatPage() {
               {messages.map((msg, idx) => {
                 const isMe = msg.pengirim_id === currentUser?.id;
                 return (
-                  <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
+                    
+                    {isMe && !msg.dihapus && msg.id && (
+                      <div className={`flex items-center mr-2 transition-opacity relative ${activeMenuId === msg.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                        <button onClick={() => setActiveMenuId(activeMenuId === msg.id ? null : msg.id)} className="p-1 text-gray-400 hover:text-gray-600 bg-white rounded-full shadow-sm">
+                          <MoreVertical size={16} />
+                        </button>
+                        {activeMenuId === msg.id && (
+                          <div className="absolute right-0 bottom-full mb-1 bg-white border shadow-lg rounded-xl py-1 z-20 w-32 overflow-hidden">
+                            <button 
+                              onClick={() => { setEditingMessageId(msg.id); setInputText(msg.teks); setActiveMenuId(null); }}
+                              className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                            >
+                              <Edit2 size={14} /> Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(msg.id)}
+                              className="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                            >
+                              <Trash2 size={14} /> Hapus
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${
                       isMe 
                       ? 'bg-[#4A1D8F] text-white rounded-tr-none' 
                       : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
-                    }`}>
+                    } ${msg.dihapus ? 'italic opacity-60 bg-gray-100 text-gray-500 border-none' : ''}`}>
                       {msg.teks}
+                      {msg.diedit && !msg.dihapus && <span className="text-[10px] opacity-70 ml-2 font-medium">(diedit)</span>}
                     </div>
                   </div>
                 );
@@ -167,13 +215,24 @@ export default function ChatPage() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-white border-t">
+          <div className="p-4 bg-white border-t relative">
+            {editingMessageId && (
+              <div className="absolute bottom-full left-0 right-0 bg-gray-50 px-6 py-2 border-t flex justify-between items-center shadow-[0_-5px_10px_rgb(0,0,0,0.02)]">
+                <div className="flex items-center gap-2 text-xs text-[#4A1D8F] font-semibold">
+                  <Edit2 size={14} />
+                  <span>Sedang mengedit pesan...</span>
+                </div>
+                <button onClick={() => { setEditingMessageId(null); setInputText(''); }} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <form onSubmit={handleSend} className="max-w-4xl mx-auto flex gap-2">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ketik pesan konsultasi Anda..."
+                placeholder={editingMessageId ? "Ketik pesan baru..." : "Ketik pesan konsultasi Anda..."}
                 className="flex-1 bg-gray-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#4A1D8F] transition-all"
               />
               <button

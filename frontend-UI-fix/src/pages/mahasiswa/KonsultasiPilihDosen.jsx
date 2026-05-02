@@ -13,6 +13,7 @@ export default function KonsultasiPilihDosen() {
       setIsLoading(true);
       try {
         const data = await getDosenList();
+        console.log("DEBUG: Daftar Dosen dari API:", data);
         setDosenList(data || []);
       } catch (err) {
         console.error("Gagal mengambil daftar dosen:", err);
@@ -71,8 +72,8 @@ export default function KonsultasiPilihDosen() {
                 </div>
 
                 <div className="text-center px-2">
-                  <h3 className="font-extrabold text-gray-900 text-[15px] mb-1 tracking-tight">{dosen.prodi || 'Dosen FILKOM'}</h3>
-                  <p className="text-[13px] text-gray-500 font-medium leading-snug">{dosen.nama_lengkap}</p>
+                  <h3 className="font-extrabold text-gray-900 text-[15px] mb-1 tracking-tight">{dosen.nama_lengkap || 'Nama Dosen'}</h3>
+                  <p className="text-[13px] text-gray-500 font-medium leading-snug">{dosen.prodi || 'Dosen FILKOM'}</p>
                   <p className="text-[10px] text-gray-400 mt-1 font-bold">NIP: {dosen.nip}</p>
                 </div>
               </div>

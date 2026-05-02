@@ -12,6 +12,7 @@ type Appointment struct {
 	JamRequest         string    `json:"jam_request"`
 	Jenis              string    `json:"jenis"`
 	Status             string    `json:"status"`
+	LampiranURL        *string   `json:"lampiran_url"`
 	RescheduleTanggal  *string   `json:"reschedule_tanggal"`
 	RescheduleJam      *string   `json:"reschedule_jam"`
 	RescheduleCatatan  *string   `json:"reschedule_catatan"`

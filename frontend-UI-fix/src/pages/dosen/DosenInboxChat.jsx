@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Sidebar } from '../../components/Sidebar';
 import { Topbar } from '../../components/Topbar';
 import { MessageSquareOff, User } from 'lucide-react';
-import { getAppointments } from '../../api';
+import { getChatContacts } from '../../api';
 
 export default function DosenInboxChat() {
   const [contacts, setContacts] = useState([]);
@@ -12,15 +12,18 @@ export default function DosenInboxChat() {
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const apts = await getAppointments();
-        // Extract unique students
-        const uniqueMhs = {};
-        apts.forEach(a => {
-          if (a.mahasiswa) {
-            uniqueMhs[a.mahasiswa.user_id] = a.mahasiswa;
-          }
-        });
-        setContacts(Object.values(uniqueMhs));
+        const data = await getChatContacts();
+        
+        // Buat objek unik agar jika ada duplikat user, ter-filter otomatis
+        const uniqueContacts = {};
+        if (data && Array.isArray(data)) {
+          data.forEach(user => {
+            if (user && user.user_id) {
+              uniqueContacts[user.user_id] = user;
+            }
+          });
+        }
+        setContacts(Object.values(uniqueContacts));
       } catch (err) {
         console.error("Gagal load contacts:", err);
       } finally {

@@ -48,16 +48,18 @@ export const getDosenList = () => {
 };
 
 export const updateProfile = (data) => {
+  const body = data instanceof FormData ? data : JSON.stringify(data);
   return apiCall('/api/profile', {
     method: 'PUT',
-    body: JSON.stringify(data),
+    body,
   });
 };
 
 export const createAppointment = (data) => {
+  const body = data instanceof FormData ? data : JSON.stringify(data);
   return apiCall('/api/appointment', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body,
   });
 };
 
@@ -103,6 +105,43 @@ export const completeAppointment = (id, catatan) => {
 export const getMessages = (targetUserID) => {
   return apiCall(`/api/chat/${targetUserID}`, {
     method: 'GET',
+  });
+};
+
+export const getChatContacts = () => {
+  return apiCall(`/api/chat-contacts`, {
+    method: 'GET',
+  });
+};
+
+export const getNotifications = () => {
+  return apiCall('/api/notification', {
+    method: 'GET',
+  });
+};
+
+export const markNotificationsAsRead = () => {
+  return apiCall('/api/notification/read', {
+    method: 'PUT',
+  });
+};
+
+export const getDosenStats = () => {
+  return apiCall('/api/stats/dosen', {
+    method: 'GET',
+  });
+};
+
+export const deleteMessage = (messageId) => {
+  return apiCall(`/api/chat/${messageId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const editMessage = (messageId, teks) => {
+  return apiCall(`/api/chat/${messageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ teks }),
   });
 };
 

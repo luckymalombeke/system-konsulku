@@ -84,7 +84,11 @@ func (s *NotificationService) RejectAppointment(apptID uint, dosenUserID uint, a
 }
 
 func (s *NotificationService) GetMyNotifications(userID uint) ([]models.Notifikasi, error) {
-	return s.Repo.GetUnreadForUser(userID)
+	return s.Repo.GetForUser(userID)
+}
+
+func (s *NotificationService) MarkAllAsRead(userID uint) error {
+	return s.Repo.MarkAllAsRead(userID)
 }
 
 func (s *NotificationService) CancelAppointment(apptID uint, mahasiswaUserID uint, alasan string) error {

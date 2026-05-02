@@ -23,12 +23,13 @@ func HandleSendMessage(c *gin.Context) {
 		return
 	}
 
-	if err := chatService.SendMessage(userID, role, input.TargetUserID, input.Teks); err != nil {
+	pesan, err := chatService.SendMessage(userID, role, input.TargetUserID, input.Teks)
+	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(201, gin.H{"message": "Pesan terkirim"})
+	c.JSON(201, gin.H{"message": "Pesan terkirim", "data": pesan})
 }
 
 func HandleGetMessages(c *gin.Context) {
@@ -49,4 +50,60 @@ func HandleGetMessages(c *gin.Context) {
 	}
 
 	c.JSON(200, messages)
+}
+
+func HandleEditMessage(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	messageIDStr := c.Param("message_id")
+	messageID, err := strconv.Atoi(messageIDStr)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid message_id"})
+		return
+	}
+
+	var input struct {
+		Teks string `json:"teks"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := chatService.EditMessage(userID, uint(messageID), input.Teks); err != nil {
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Pesan berhasil diedit"})
+}
+
+func HandleDeleteMessage(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	messageIDStr := c.Param("message_id")
+	messageID, err := strconv.Atoi(messageIDStr)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid message_id"})
+		return
+	}
+
+	if err := chatService.DeleteMessage(userID, uint(messageID)); err != nil {
+		c.JSON(403, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Pesan berhasil dihapus"})
+}
+
+func HandleGetChatContacts(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	role := c.MustGet("role").(string)
+
+	contacts, err := chatService.GetChatContacts(userID, role)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, contacts)
 }

@@ -44,6 +44,7 @@ func main() {
 
 	r := gin.Default()
 	r.Use(middlewares.CORSMiddleware())
+	r.Static("/uploads", "./uploads")
 
 	r.POST("/login", handlers.HandleLogin)
 	r.POST("/register", handlers.HandleRegister)
@@ -66,11 +67,18 @@ func main() {
 		authorized.PUT("/appointment/:id/complete", handlers.HandleCompleteAppointment)
 		
 		// Chat
+		authorized.GET("/chat-contacts", handlers.HandleGetChatContacts)
 		authorized.POST("/chat", handlers.HandleSendMessage)
 		authorized.GET("/chat/:target_id", handlers.HandleGetMessages)
+		authorized.PUT("/chat/:message_id", handlers.HandleEditMessage)
+		authorized.DELETE("/chat/:message_id", handlers.HandleDeleteMessage)
 		
 		// Notification
 		authorized.GET("/notification", handlers.HandleGetNotifications)
+		authorized.PUT("/notification/read", handlers.HandleMarkNotificationsAsRead)
+
+		// Stats
+		authorized.GET("/stats/dosen", handlers.HandleGetDosenStats)
 
 		// AI Assistant
 		authorized.POST("/ai/advice", handlers.HandleAIAdvice)

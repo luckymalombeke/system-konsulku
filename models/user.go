@@ -22,6 +22,7 @@ type Dosen struct {
 	Prodi         string `json:"prodi"`
 	IsAvailable   bool   `json:"is_available"`
 	CatatanJadwal string `json:"catatan_jadwal" gorm:"type:text"`
+	FotoProfil    string `json:"foto_profil"`
 }
 
 type Mahasiswa struct {
@@ -35,6 +36,7 @@ type Mahasiswa struct {
 	Bio         string `json:"bio"`
 	Pengalaman  string `json:"pengalaman"`
 	Prodi       string `json:"prodi"`
+	FotoProfil  string `json:"foto_profil"`
 }
 
 func (Dosen) TableName() string {

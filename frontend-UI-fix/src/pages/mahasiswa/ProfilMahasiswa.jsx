@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../../components/Layout';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
-import { Edit2, Save, X } from 'lucide-react';
+import { Edit2, Save, X, Camera } from 'lucide-react';
 import { getProfile, updateProfile, logout } from '../../api';
 
 export default function ProfilMahasiswa() {
@@ -16,6 +16,8 @@ export default function ProfilMahasiswa() {
     bio: '',
     pengalaman: ''
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const fetchProfile = async () => {
     setIsLoading(true);
@@ -41,10 +43,28 @@ export default function ProfilMahasiswa() {
     fetchProfile();
   }, []);
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleSave = async () => {
     try {
-      await updateProfile(formData);
+      const data = new FormData();
+      Object.keys(formData).forEach(key => {
+        data.append(key, formData[key]);
+      });
+      if (selectedFile) {
+        data.append('foto_profil', selectedFile);
+      }
+
+      await updateProfile(data);
       setIsEditing(false);
+      setSelectedFile(null);
+      setPreviewUrl(null);
       fetchProfile();
       alert("Profil berhasil diperbarui!");
     } catch (err) {
@@ -87,7 +107,13 @@ export default function ProfilMahasiswa() {
         {/* Left Card */}
         <div className="card text-center h-fit">
           <div className="relative w-[100px] mx-auto mb-4">
-            <AvatarPlaceholder size={100} />
+            <AvatarPlaceholder size={100} src={previewUrl || profile?.foto_profil} />
+            {isEditing && (
+              <label className="absolute bottom-0 right-0 bg-[#4A1D8F] text-white p-2 rounded-full cursor-pointer hover:bg-[#3A1572] transition-colors shadow-lg">
+                <Camera size={16} />
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+              </label>
+            )}
           </div>
 
           {isEditing ? (

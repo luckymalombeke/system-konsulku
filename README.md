@@ -157,7 +157,7 @@ This project proves the ability to not just write code, but to **lead, manage, a
 git clone https://github.com/luckymalombeke/system-konsulku.git
 
 # Configure Environment
-cp .env.example .env # Ensure DB and GEMINI_API_KEY are set
+cp .env.example .env # Ensure DB and GROQ_API_KEY are set
 
 # Run the engine
 go run main.go

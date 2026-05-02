@@ -54,6 +54,17 @@ func HandleGetNotifications(c *gin.Context) {
 	c.JSON(200, notifs)
 }
 
+func HandleMarkNotificationsAsRead(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+
+	if err := notifService.MarkAllAsRead(userID); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Semua notifikasi ditandai sudah dibaca"})
+}
+
 func HandleCancelAppointment(c *gin.Context) {
 	userID := uint(c.MustGet("user_id").(float64))
 	role := c.MustGet("role").(string)

@@ -47,10 +47,11 @@ export default function DosenDashboard() {
   };
 
   // Hitung Statistik Real
-  const pendingCount = appointments.filter(a => a.status === 'Pending' || a.status === 'pending').length;
+  const uniqueMahasiswa = [...new Set(appointments.map(a => a.mahasiswa_id))].length;
+  const pendingCount = appointments.filter(a => a.status === 'Pending' || a.status === 'pending' || a.status === 'Menunggu').length;
   const finishedCount = appointments.filter(a => a.status === 'Selesai' || a.status === 'selesai').length;
   const recentRequests = appointments
-    .filter(a => a.status === 'Pending' || a.status === 'pending')
+    .filter(a => a.status === 'Pending' || a.status === 'pending' || a.status === 'Menunggu')
     .slice(0, 5);
   
   const todayApts = appointments.filter(a => {
@@ -87,7 +88,7 @@ export default function DosenDashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Users} value="-" label="Mahasiswa Aktif" borderColor="border-[#4A1D8F]" iconBg="bg-purple-100" iconColor="text-[#4A1D8F]" />
+        <StatCard icon={Users} value={uniqueMahasiswa.toString()} label="Mahasiswa Aktif" borderColor="border-[#4A1D8F]" iconBg="bg-purple-100" iconColor="text-[#4A1D8F]" />
         <StatCard icon={MessageSquare} value="0" label="Chat Belum Dibaca" borderColor="border-blue-400" iconBg="bg-blue-50" iconColor="text-blue-500" />
         <StatCard icon={Calendar} value={pendingCount.toString()} label="Appointment Pending" borderColor="border-orange-400" iconBg="bg-orange-50" iconColor="text-orange-500" />
         <StatCard icon={CheckCircle} value={finishedCount.toString()} label="Selesai Bulan Ini" borderColor="border-green-500" iconBg="bg-green-50" iconColor="text-green-600" />

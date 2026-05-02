@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"strings"
 	"time"
 	"konsulku/config"
 	"konsulku/models"
@@ -29,30 +30,42 @@ func HandleCreateAppointment(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		DosenID        uint   `json:"dosen_id" binding:"required"`
-		Topik          string `json:"topik" binding:"required"`
-		Deskripsi      string `json:"deskripsi"`
-		TanggalRequest string `json:"tanggal_request" binding:"required"`
-		JamRequest     string `json:"jam_request" binding:"required"`
-		Jenis          string `json:"jenis"`
-		Status         string `json:"status"`
+	dosenIDStr := c.PostForm("dosen_id")
+	dosenID, _ := strconv.Atoi(dosenIDStr)
+	topik := c.PostForm("topik")
+	deskripsi := c.PostForm("deskripsi")
+	tanggalRequest := c.PostForm("tanggal_request")
+	jamRequest := c.PostForm("jam_request")
+	jenis := c.PostForm("jenis")
+	status := c.PostForm("status")
+	if status == "" {
+		status = "Menunggu"
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
+	// Handle file upload
+	var lampiranURL *string
+	file, err := c.FormFile("lampiran")
+	if err == nil { // Jika ada file yang diunggah
+		safeFilename := strings.ReplaceAll(file.Filename, " ", "_")
+		safeFilename = strings.ReplaceAll(safeFilename, "#", "")
+		filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), safeFilename)
+		filepath := "./uploads/" + filename
+		if err := c.SaveUploadedFile(file, filepath); err == nil {
+			url := "/uploads/" + filename
+			lampiranURL = &url
+		}
 	}
 
 	input := models.Appointment{
 		MahasiswaID:    mhs.ID,
-		DosenID:        req.DosenID,
-		Topik:          req.Topik,
-		Deskripsi:      req.Deskripsi,
-		TanggalRequest: req.TanggalRequest,
-		JamRequest:     req.JamRequest,
-		Jenis:          req.Jenis,
-		Status:         req.Status,
+		DosenID:        uint(dosenID),
+		Topik:          topik,
+		Deskripsi:      deskripsi,
+		TanggalRequest: tanggalRequest,
+		JamRequest:     jamRequest,
+		Jenis:          jenis,
+		Status:         status,
+		LampiranURL:    lampiranURL,
 	}
 	if err := apptService.CreateBooking(&input); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

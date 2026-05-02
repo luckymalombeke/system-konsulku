@@ -8,7 +8,7 @@ type KonsultasiChat struct {
 	Mahasiswa   Mahasiswa `gorm:"foreignKey:MahasiswaID" json:"mahasiswa"`
 	DosenID     uint      `json:"dosen_id"`
 	Dosen       Dosen     `gorm:"foreignKey:DosenID" json:"dosen"`
-	DibuatPada  time.Time `json:"dibuat_pada"`
+	DibuatPada  time.Time `gorm:"autoCreateTime" json:"dibuat_pada"`
 }
 
 func (KonsultasiChat) TableName() string {
@@ -24,7 +24,9 @@ type Pesan struct {
 	Teks       string         `json:"teks"`
 	IsFile     bool           `json:"is_file"`
 	Dibaca     bool           `json:"dibaca"`
-	DikirimAt  time.Time      `json:"dikirim_at"`
+	Diedit     bool           `json:"diedit" gorm:"default:false"`
+	Dihapus    bool           `json:"dihapus" gorm:"default:false"`
+	DikirimAt  time.Time      `gorm:"autoCreateTime" json:"dikirim_at"`
 }
 
 func (Pesan) TableName() string {

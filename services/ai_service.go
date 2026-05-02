@@ -1,277 +1,280 @@
 package services
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
+	"io"
 	"konsulku/config"
 	"konsulku/models"
-
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
+	"net/http"
+	"os"
+	"strings"
 )
 
 type AIService struct {
-	client *genai.Client
+	ApiKey string
+	Model  string
 }
 
 func NewAIService() *AIService {
-	ctx := context.Background()
-	apiKey := os.Getenv("GEMINI_API_KEY")
+	apiKey := os.Getenv("GROQ_API_KEY")
 	if apiKey == "" {
-		fmt.Println("[AI Service] ❌ Warning: GEMINI_API_KEY tidak ada.")
-		return &AIService{}
+		fmt.Println("[AI Service] ❌ Warning: GROQ_API_KEY tidak ada.")
+	}
+	return &AIService{
+		ApiKey: apiKey,
+		Model:  "llama-3.3-70b-versatile",
+	}
+}
+
+// Groq Structures - Updated for better compatibility
+type GroqMessage struct {
+	Role       string          `json:"role"`
+	Content    string          `json:"content"`
+	ToolCalls  []GroqToolCall  `json:"tool_calls,omitempty"`
+	ToolCallID string          `json:"tool_call_id,omitempty"`
+}
+
+type GroqToolCall struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Function struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
+}
+
+type GroqResponse struct {
+	Choices []struct {
+		Message GroqMessage `json:"message"`
+	} `json:"choices"`
+	Error struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func (s *AIService) callGroq(messages []GroqMessage, tools interface{}) (*GroqResponse, error) {
+	url := "https://api.groq.com/openai/v1/chat/completions"
+
+	payload := map[string]interface{}{
+		"model":    s.Model,
+		"messages": messages,
+	}
+	if tools != nil {
+		payload["tools"] = tools
+		payload["tool_choice"] = "auto"
 	}
 
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	jsonData, _ := json.Marshal(payload)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+s.ApiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return &AIService{}
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var groqResp GroqResponse
+	if err := json.Unmarshal(body, &groqResp); err != nil {
+		return nil, err
 	}
 
-	return &AIService{client: client}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("API Error (%d): %s", resp.StatusCode, groqResp.Error.Message)
+	}
+
+	return &groqResp, nil
 }
 
 func (s *AIService) GetConsultationAdvice(topic string, problem string) (string, error) {
-	// Jika client ada, coba panggil Google dulu
-	if s.client != nil {
-		ctx := context.Background()
-		// Kita coba pakai model yang paling mungkin tersedia
-		model := s.client.GenerativeModel("gemini-2.0-flash-lite") 
-
-		prompt := fmt.Sprintf(`
-			Anda adalah asisten akademik profesional KonsulKu. Berikan saran persiapan untuk:
-			Topik: %s
-			Masalah: %s
-			Berikan 3-5 poin saran profesional dalam Bahasa Indonesia.
-		`, topic, problem)
-
-		resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-		if err == nil && len(resp.Candidates) > 0 {
-			var result string
-			for _, part := range resp.Candidates[0].Content.Parts {
-				result += fmt.Sprintf("%v", part)
-			}
-			return result, nil
-		}
-		
-		// Jika error (seperti 429 atau 404), jangan stop! Lanjut ke Fallback di bawah.
-		fmt.Printf("[AI Service] ⚡ Mengaktifkan Mode Fallback (API Error: %v)\n", err)
+	if s.ApiKey == "" {
+		return s.generateSmartFallback(topic, problem), nil
 	}
 
-	// --- LOGIKA FALLBACK (AI SIMULASI) ---
-	// Ini akan memberikan jawaban yang terlihat sangat pintar meski tanpa internet/API
+	prompt := fmt.Sprintf(`
+		Anda adalah asisten akademik profesional KonsulKu. Berikan saran persiapan untuk:
+		Topik: %s
+		Masalah: %s
+		Berikan 3-5 poin saran profesional dalam Bahasa Indonesia.
+	`, topic, problem)
+
+	messages := []GroqMessage{
+		{Role: "user", Content: prompt},
+	}
+
+	resp, err := s.callGroq(messages, nil)
+	if err != nil {
+		return s.generateSmartFallback(topic, problem), nil
+	}
+
+	if len(resp.Choices) > 0 {
+		return resp.Choices[0].Message.Content, nil
+	}
+
 	return s.generateSmartFallback(topic, problem), nil
 }
 
-// ==============================================================================
-// FITUR LLM DEVELOPER: FUNCTION CALLING (TOOL USE)
-// ==============================================================================
+func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
+	if s.ApiKey == "" {
+		return "API Key Groq belum siap.", nil
+	}
 
-// 1. Definisikan "Tool" (Fungsi) yang bisa dipanggil oleh AI
-var lecturerScheduleTool = &genai.Tool{
-	FunctionDeclarations: []*genai.FunctionDeclaration{{
-		Name:        "get_lecturer_schedule",
-		Description: "Mengambil jadwal kosong (availability) dari seorang dosen. Panggil fungsi ini jika mahasiswa bertanya tentang jadwal dosen atau kapan bisa bimbingan.",
-		Parameters: &genai.Schema{
-			Type: genai.TypeObject,
-			Properties: map[string]*genai.Schema{
-				"lecturer_name": {
-					Type:        genai.TypeString,
-					Description: "Nama dosen yang ingin dicari jadwalnya (contoh: Budi, Ani, Surya).",
+	tools := []interface{}{
+		map[string]interface{}{
+			"type": "function",
+			"function": map[string]interface{}{
+				"name":        "get_lecturer_schedule",
+				"description": "Cek jadwal dosen di database.",
+				"parameters": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"lecturer_name": map[string]interface{}{
+							"type":        "string",
+							"description": "Nama dosen (contoh: Semmy).",
+						},
+					},
+					"required": []string{"lecturer_name"},
 				},
 			},
-			Required: []string{"lecturer_name"},
 		},
-	}},
-}
-
-// 2. Fungsi lokal (Backend) yang akan dieksekusi jika AI memintanya
-func getLecturerInfoFromDB(name string) string {
-	var dosen models.Dosen
-	// Menggunakan GORM untuk mencari dosen berdasarkan nama (LIKE)
-	// Karena AutoMigrate, tabel "dosen" sudah pasti memiliki kolom "nama_lengkap"
-	result := config.DB.Where("nama_lengkap LIKE ?", "%"+name+"%").First(&dosen)
-	
-	if result.Error != nil {
-		return fmt.Sprintf("Maaf, dosen dengan nama '%s' tidak ditemukan di database kampus.", name)
 	}
 
-	// Cek status is_available
-	status := "tersedia untuk bimbingan"
-	if !dosen.IsAvailable {
-		status = "sedang tidak tersedia (mungkin sedang cuti atau sibuk)"
+	messages := []GroqMessage{
+		{Role: "system", Content: "Anda adalah KonsulKu AI. Jika pengguna menyebutkan nama dosen, Anda WAJIB memanggil fungsi 'get_lecturer_schedule'. Saat merangkum jawaban, Anda HARUS menampilkan semua detail yang ditemukan (Nama Lengkap, Gelar, Prodi, Status Ketersediaan, dan Jadwal Spesifik) dalam format yang rapi dan profesional. Jangan memberikan jawaban singkat jika data tersedia."},
+		{Role: "user", Content: userMessage},
 	}
 
-	// Menyusun profil dosen untuk dikembalikan ke AI
-	catatan := dosen.CatatanJadwal
-	if catatan == "" {
-		catatan = "Tidak ada catatan jadwal spesifik."
-	}
-
-	return fmt.Sprintf("Dosen ditemukan: %s %s. Jabatan: %s. Prodi: %s. Status saat ini: %s. Catatan Jadwal: %s. Keahlian/Pengalaman: %s.", 
-		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Jabatan, dosen.Prodi, status, catatan, dosen.Pengalaman)
-}
-
-// 3. Method baru yang mendemonstrasikan integrasi Agentic Workflow
-func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
-	if s.client == nil {
-		return "API Client belum siap. Cek GEMINI_API_KEY.", nil
-	}
-
-	ctx := context.Background()
-	model := s.client.GenerativeModel("gemini-2.5-flash") // Gunakan model terbaru yang mendukung function calling
-
-	model.SystemInstruction = genai.NewUserContent(genai.Text(
-		"Anda adalah Asisten Akademik Kampus yang ramah dan suportif bernama KonsulKu AI. " +
-		"Tugas Anda adalah membantu mahasiswa berdiskusi tentang perkuliahan, skripsi, magang, dan akademik secara umum. " +
-		"Jika mahasiswa bertanya soal jadwal dosen, gunakan tool yang tersedia. " +
-		"Jika mereka bertanya soal lain (seperti tips magang), jawablah dengan wawasan Anda selayaknya dosen pembimbing yang baik.",
-	))
-
-	// Beritahu model bahwa dia punya "Alat" (Tool)
-	model.Tools = []*genai.Tool{lecturerScheduleTool}
-
-	// Buat sesi chat (agar ada history)
-	session := model.StartChat()
-
-	// Langkah 1: Kirim pesan user ke AI
-	resp, err := session.SendMessage(ctx, genai.Text(userMessage))
+	resp, err := s.callGroq(messages, tools)
 	if err != nil {
-		return "", fmt.Errorf("Gagal menghubungi AI: %v", err)
+		return "Gagal di panggilan pertama: " + err.Error(), nil
 	}
 
-	// Langkah 2: Cek apakah AI memutuskan untuk "Memanggil Fungsi" (Function Call)
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if funcCall, ok := part.(genai.FunctionCall); ok {
-			fmt.Printf("[AI Agent] 🤖 AI memutuskan memanggil fungsi: %s\n", funcCall.Name)
+	if len(resp.Choices) > 0 {
+		assistantMsg := resp.Choices[0].Message
+		
+		if len(assistantMsg.ToolCalls) > 0 {
+			toolCall := assistantMsg.ToolCalls[0]
 			
-			// Jika AI memanggil "get_lecturer_schedule"
-			if funcCall.Name == "get_lecturer_schedule" {
-				// Ambil argumen yang di-generate oleh AI
-				lecturerName := ""
-				if args, ok := funcCall.Args["lecturer_name"].(string); ok {
-					lecturerName = args
+			if toolCall.Function.Name == "get_lecturer_schedule" {
+				var args struct {
+					LecturerName string `json:"lecturer_name"`
 				}
+				json.Unmarshal([]byte(toolCall.Function.Arguments), &args)
 
-				// EKSEKUSI FUNGSI LOKAL BACKEND MENGGUNAKAN DATABASE ASLI
-				fmt.Printf("[AI Agent] ⚙️ Mengeksekusi database query mencari dosen: %s\n", lecturerName)
-				apiResult := getLecturerInfoFromDB(lecturerName)
+				dbResult := getLecturerInfoFromDB(args.LecturerName)
 
-				// Kembalikan hasil dari sistem lokal kembali ke AI
-				// AI akan membaca hasil ini dan membuat kalimat balasan yang natural
-				resp, err = session.SendMessage(ctx, genai.FunctionResponse{
-					Name: "get_lecturer_schedule",
-					Response: map[string]any{
-						"result": apiResult,
-					},
+				// Tambahkan pesan asisten (yang berisi instruksi panggil fungsi) ke history
+				messages = append(messages, GroqMessage{
+					Role:      "assistant",
+					Content:   assistantMsg.Content,
+					ToolCalls: assistantMsg.ToolCalls,
 				})
+				
+				// Tambahkan hasil tool (jawaban dari database) ke history
+				messages = append(messages, GroqMessage{
+					Role:       "tool",
+					ToolCallID: toolCall.ID,
+					Content:    dbResult,
+				})
+
+				// Panggil lagi untuk merangkum (KALI INI TANPA TOOLS agar AI fokus bicara)
+				resp2, err := s.callGroq(messages, nil)
 				if err != nil {
-					return "", err
+					return "Gagal merangkum jawaban: " + err.Error(), nil
 				}
 				
-				// Return jawaban final dari AI
-				var finalResponse string
-				for _, p := range resp.Candidates[0].Content.Parts {
-					finalResponse += fmt.Sprintf("%v", p)
+				if len(resp2.Choices) > 0 {
+					content := resp2.Choices[0].Message.Content
+					if content != "" {
+						return content, nil
+					}
 				}
-				return finalResponse, nil
+				return "Saya sudah menemukan datanya, tapi gagal merangkumnya. Silakan tanya lagi.", nil
 			}
+		}
+		
+		if assistantMsg.Content != "" {
+			return assistantMsg.Content, nil
 		}
 	}
 
-	// Jika AI tidak memanggil fungsi, langsung return jawabannya (teks biasa)
-	var normalResponse string
-	for _, part := range resp.Candidates[0].Content.Parts {
-		normalResponse += fmt.Sprintf("%v", part)
-	}
-	return normalResponse, nil
+	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
-// ==============================================================================
-// FITUR RAG SEDERHANA: DOCUMENT ANALYSIS
-// ==============================================================================
-
-// AnalyzeProposal menerima konten teks dari file (PDF/TXT) dan memberikan feedback
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
-	if s.client == nil {
-		return "API Client belum siap.", nil
+	if s.ApiKey == "" {
+		return "API Key Groq belum siap.", nil
 	}
 
-	ctx := context.Background()
-	model := s.client.GenerativeModel("gemini-2.5-flash")
-
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik Profesional.
-		Tugas Anda adalah meninjau Draft Proposal Mahasiswa berikut:
-		
+		Anda adalah Reviewer Akademik Profesional. Tinjau draft proposal ini:
 		Nama File: %s
 		--- ISI DRAFT ---
 		%s
-		--- AKHIR DRAFT ---
-
-		Berikan analisis mendalam dalam Bahasa Indonesia dengan format:
-		1. Ringkasan singkat topik penelitian.
-		2. Kekuatan draft ini.
-		3. Kelemahan atau hal yang perlu diperbaiki (metodologi, penulisan, atau referensi).
-		4. Rekomendasi langkah selanjutnya.
-
-		Berikan jawaban dalam format Markdown yang rapi.
 	`, fileName, fileContent)
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	messages := []GroqMessage{
+		{Role: "user", Content: prompt},
+	}
+
+	resp, err := s.callGroq(messages, nil)
 	if err != nil {
-		return "", fmt.Errorf("gagal menganalisis proposal: %v", err)
+		return "", err
 	}
 
-	if len(resp.Candidates) == 0 {
-		return "AI tidak memberikan respon.", nil
+	if len(resp.Choices) > 0 {
+		return resp.Choices[0].Message.Content, nil
 	}
 
-	var result string
-	for _, part := range resp.Candidates[0].Content.Parts {
-		result += fmt.Sprintf("%v", part)
-	}
-	return result, nil
+	return "Analisis gagal.", nil
 }
 
-
-func (s *AIService) generateSmartFallback(topic, problem string) string {
-	topicLower := strings.ToLower(topic)
-	problemLower := strings.ToLower(problem)
-	
-	advice := "### 💡 Saran Persiapan (Smart Fallback Mode)\n\n"
-	
-	// --- DINAMIS BERDASARKAN KONTEN ---
-	if strings.Contains(topicLower, "skripsi") || strings.Contains(topicLower, "tugas akhir") || strings.Contains(topicLower, " ta ") || strings.HasSuffix(topicLower, " ta") {
-		advice += "Berdasarkan topik **Skripsi** Anda, berikut panduannya:\n\n"
-		advice += "1. **Progress Report**: Siapkan catatan bab mana yang sudah selesai dan di mana letak kendala spesifiknya.\n"
-		advice += "2. **Literatur**: Bawa minimal 3 jurnal referensi yang Anda gunakan sebagai dasar argumen.\n"
-		advice += "3. **Metodologi**: Siapkan alasan kuat kenapa Anda memilih metode tersebut jika ditanya Dosen.\n"
-	} else if strings.Contains(topicLower, "koding") || strings.Contains(topicLower, "program") || strings.Contains(topicLower, "error") || strings.Contains(problemLower, "error") {
-		advice += "Berdasarkan kendala **Pemrograman** Anda, berikut panduannya:\n\n"
-		advice += "1. **Code Snippet**: Siapkan baris kode yang error atau yang ingin dikonsultasikan di laptop Anda.\n"
-		advice += "2. **Log Error**: Salin pesan error yang muncul agar Dosen bisa membantu debug dengan cepat.\n"
-		advice += "3. **Solusi Sementara**: Jelaskan apa saja yang sudah Anda coba lakukan untuk memperbaiki error tersebut.\n"
-	} else if strings.Contains(topicLower, "nilai") || strings.Contains(topicLower, "krs") || strings.Contains(topicLower, "akademik") {
-		advice += "Berdasarkan masalah **Akademik** Anda, berikut panduannya:\n\n"
-		advice += "1. **KHS/Transkrip**: Bawa cetakan KHS terbaru Anda untuk ditunjukkan ke Dosen Pembimbing.\n"
-		advice += "2. **Target IPK**: Siapkan rencana perbaikan nilai untuk semester depan.\n"
-		advice += "3. **Masalah Spesifik**: Jelaskan alasan kenapa nilai tersebut kurang memuaskan.\n"
-	} else if strings.Contains(topicLower, "magang") || strings.Contains(topicLower, "internship") || strings.Contains(topicLower, "kerja praktek") {
-		advice += "Berdasarkan topik **Magang / Internship** Anda, berikut panduannya:\n\n"
-		advice += "1. **CV & Portofolio**: Siapkan CV terbaru dan tunjukkan proyek (seperti KonsulKu ini) kepada Dosen.\n"
-		advice += "2. **Target Perusahaan**: Riset dulu profil perusahaan (misal: FXMedia) agar diskusi lebih terarah.\n"
-		advice += "3. **Logbook**: Bawa buku kendali atau logbook magang untuk ditandatangani.\n"
-	} else {
-		// Default jika tidak ada keyword cocok
-		advice += "Berikut adalah panduan persiapan konsultasi umum untuk Anda:\n\n"
-		advice += "1. **Ringkasan Masalah**: Siapkan penjelasan singkat tentang apa yang ingin dicapai dari konsultasi ini.\n"
-		advice += "2. **Catatan**: Selalu bawa buku catatan untuk mencatat setiap masukan dari Dosen.\n"
-		advice += "3. **Konfirmasi**: Pastikan Anda memahami langkah selanjutnya sebelum meninggalkan ruangan.\n"
+func getLecturerInfoFromDB(name string) string {
+	cleanName := strings.TrimSpace(name)
+	prefixes := []string{"Pak ", "Ibu ", "Sir ", "Ms ", "Mr ", "Meneer "}
+	for _, p := range prefixes {
+		if strings.HasPrefix(strings.ToLower(cleanName), strings.ToLower(p)) {
+			cleanName = cleanName[len(p):]
+		}
 	}
 
-	advice += "\n*Catatan: Saat ini sistem menggunakan mode cadangan cerdas karena kuota API Google Gemini sedang penuh.*"
+	var dosen models.Dosen
+	// Gunakan Find().Limit(1) agar tidak muncul error 'record not found' berwarna merah di terminal jika tidak ketemu
+	result := config.DB.Where("LOWER(nama_lengkap) LIKE LOWER(?)", "%"+cleanName+"%").Limit(1).Find(&dosen)
 	
-	return advice
+	// Cek apakah ada data yang ditemukan (RowsAffected > 0)
+	if result.RowsAffected == 0 {
+		// Jika tidak ditemukan, coba ambil 3 nama dosen yang ada sebagai referensi
+		var allDosen []models.Dosen
+		config.DB.Select("nama_lengkap").Limit(3).Find(&allDosen)
+		
+		names := []string{}
+		for _, d := range allDosen {
+			names = append(names, d.NamaLengkap)
+		}
+		
+		return fmt.Sprintf("Dosen '%s' tidak ditemukan. Dosen yang tersedia di database antara lain: %s. Pastikan ejaan nama benar.", cleanName, strings.Join(names, ", "))
+	}
+
+	status := "Tersedia"
+	if !dosen.IsAvailable {
+		status = "Tidak Tersedia"
+	}
+
+	return fmt.Sprintf("Dosen: %s %s. Prodi: %s. Status: %s. Jadwal: %s.", 
+		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Prodi, status, dosen.CatatanJadwal)
+}
+
+func (s *AIService) generateSmartFallback(topic, problem string) string {
+	return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan."
+}
+
+// Helper function
+func stringPtr(s string) *string {
+	return &s
 }

@@ -151,15 +151,28 @@ This project proves the ability to not just write code, but to **lead, manage, a
 
 ## 🔧 Installation & Setup
 
-### 1. Backend Setup
+### Prerequisites
+- **Go 1.25+**
+- **Node.js & npm**
+- **XAMPP / MySQL Server**: Ensure your local MySQL server is running.
+- **API Keys**: Groq API & Google Gemini API.
+
+### 1. Database Setup (XAMPP)
+1. Open XAMPP Control Panel and start **MySQL**.
+2. Open phpMyAdmin (http://localhost/phpmyadmin) or your SQL client.
+3. Create a new database named `konsulku` (or matching your `.env` configuration).
+
+### 2. Backend Setup
 ```bash
 # Clone the project
 git clone https://github.com/luckymalombeke/system-konsulku.git
 
 # Configure Environment
-cp .env.example .env # Ensure DB and GROQ_API_KEY are set
+cp .env.example .env 
+# Edit .env and ensure DB credentials, GROQ_API_KEY, and GEMINI_API_KEY are set.
 
-# Run the engine
+# Install dependencies and Run the engine
+go mod tidy
 go run main.go
 ```
 

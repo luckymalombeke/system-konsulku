@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ledongthuc/pdf"
 )
 
 var (
@@ -115,6 +116,22 @@ func extractTextFromDocx(content []byte) (string, error) {
 	return "", fmt.Errorf("file word/document.xml tidak ditemukan di dalam .docx")
 }
 
+// Ekstraktor teks dari file .pdf
+func extractTextFromPDF(content []byte) (string, error) {
+	reader := bytes.NewReader(content)
+	f, err := pdf.NewReader(reader, int64(len(content)))
+	if err != nil {
+		return "", err
+	}
+	b, err := f.GetPlainText()
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	buf.ReadFrom(b)
+	return buf.String(), nil
+}
+
 // HandleProposalAnalysis menangani upload file proposal mahasiswa
 func HandleProposalAnalysis(c *gin.Context) {
 	file, header, err := c.Request.FormFile("proposal")
@@ -141,8 +158,15 @@ func HandleProposalAnalysis(c *gin.Context) {
 			return
 		}
 		extractedText = text
-	} else if strings.HasSuffix(filenameLower, ".pdf") || strings.HasSuffix(filenameLower, ".doc") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format PDF/DOC belum didukung saat ini. Mohon gunakan .docx atau .txt"})
+	} else if strings.HasSuffix(filenameLower, ".pdf") {
+		text, err := extractTextFromPDF(content)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "File .pdf tidak valid atau rusak: " + err.Error()})
+			return
+		}
+		extractedText = text
+	} else if strings.HasSuffix(filenameLower, ".doc") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format .doc lama belum didukung. Mohon gunakan .docx, .pdf, atau .txt"})
 		return
 	} else {
 		// Asumsi format .txt atau format teks lainnya

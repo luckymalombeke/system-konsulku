@@ -42,6 +42,7 @@ export default function BuatAppointment() {
   const [selectedDosen, setSelectedDosen] = useState(null);
   const [selectedDate, setSelectedDate] = useState(21);
   const [selectedTime, setSelectedTime] = useState('09:00');
+  const [selectedEndTime, setSelectedEndTime] = useState('10:00');
   const [success, setSuccess] = useState(false);
   const [dosenList, setDosenList] = useState([]);
   const [isLoadingDosen, setIsLoadingDosen] = useState(true);
@@ -73,7 +74,7 @@ export default function BuatAppointment() {
       formData.append('topik', topic);
       formData.append('deskripsi', problem);
       formData.append('tanggal_request', `2025-04-${selectedDate.toString().padStart(2, '0')}`);
-      formData.append('jam_request', selectedTime);
+      formData.append('jam_request', `${selectedTime} - ${selectedEndTime}`);
       formData.append('jenis', "Tatap Muka");
       formData.append('status', "Menunggu");
       
@@ -299,24 +300,42 @@ export default function BuatAppointment() {
             <div className="card">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Clock size={16} className="text-[#4A1D8F]" />
-                Pilih Jam untuk {selectedDate} April 2025
+                Tentukan Jam untuk {selectedDate} April 2025
               </h3>
-              <div className="grid grid-cols-3 gap-2">
-                {timeSlots.map(slot => (
-                  <button
-                    key={slot.time}
-                    onClick={() => slot.available && setSelectedTime(slot.time)}
-                    className={`py-2.5 text-center text-sm rounded-lg transition-colors ${
-                      !slot.available ? 'bg-gray-100 text-gray-300 line-through cursor-not-allowed' :
-                      selectedTime === slot.time ? 'bg-[#4A1D8F] text-white font-medium' :
-                      'border border-gray-200 text-gray-700 hover:border-[#4A1D8F] hover:text-[#4A1D8F]'
-                    }`}
-                    disabled={!slot.available}
-                    id={`time-${slot.time}`}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
+              <div className="bg-[#F8F7FF] border border-[#4A1D8F]/20 rounded-xl p-5">
+                <p className="text-sm text-gray-600 mb-4">
+                  Anda bisa mengajukan jam konsultasi secara bebas. Namun, jam ini masih berupa pengajuan (request) dan akan menunggu persetujuan (Approve/Reject) dari dosen yang bersangkutan.
+                </p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="time-start" className="text-sm font-semibold text-gray-700 w-14">
+                      Mulai:
+                    </label>
+                    <input 
+                      id="time-start"
+                      type="time" 
+                      value={selectedTime}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                      className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A1D8F] font-medium text-gray-800"
+                      required
+                    />
+                  </div>
+                  <span className="hidden sm:block text-gray-400 font-bold">-</span>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="time-end" className="text-sm font-semibold text-gray-700 w-14 sm:w-auto">
+                      Selesai:
+                    </label>
+                    <input 
+                      id="time-end"
+                      type="time" 
+                      value={selectedEndTime}
+                      onChange={(e) => setSelectedEndTime(e.target.value)}
+                      className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A1D8F] font-medium text-gray-800"
+                      required
+                    />
+                  </div>
+                  <span className="text-sm text-gray-500 font-medium ml-2">WITA</span>
+                </div>
               </div>
             </div>
           </div>
@@ -401,7 +420,7 @@ export default function BuatAppointment() {
                   { label: 'Dosen', value: dosenList.find(d => d.id === selectedDosen)?.nama_lengkap || 'Belum dipilih' },
                   { label: 'Prodi Dosen', value: dosenList.find(d => d.id === selectedDosen)?.prodi || '-' },
                   { label: 'Tanggal', value: `${selectedDate} April 2025` },
-                  { label: 'Jam', value: `${selectedTime} WITA` },
+                  { label: 'Jam', value: `${selectedTime} - ${selectedEndTime} WITA` },
                   { label: 'Topik', value: topic || 'Belum ada topik' },
                   { label: 'Lampiran', value: selectedFile ? selectedFile.name : 'Tidak ada lampiran' },
                 ].map(({ label, value }) => (

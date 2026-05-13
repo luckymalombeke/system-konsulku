@@ -2,19 +2,56 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"konsulku/config"
 	"konsulku/models"
+	"math"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/option"
 )
 
 type AIService struct {
 	ApiKey string
 	Model  string
+}
+// Fungsi untuk memotong teks panjang (Chunking)
+func chunkText(text string, chunkSize int) []string {
+	words := strings.Fields(text)
+	var chunks []string
+	var currentChunk []string
+
+	for _, word := range words {
+		currentChunk = append(currentChunk, word)
+		if len(currentChunk) >= chunkSize {
+			chunks = append(chunks, strings.Join(currentChunk, " "))
+			currentChunk = nil
+		}
+	}
+	if len(currentChunk) > 0 {
+		chunks = append(chunks, strings.Join(currentChunk, " "))
+	}
+	return chunks
+}
+
+// Fungsi menghitung kedekatan makna (Cosine Similarity)
+func cosineSimilarity(a, b []float32) float32 {
+	var dotProduct, normA, normB float32
+	for i := range a {
+		dotProduct += a[i] * b[i]
+		normA += a[i] * a[i]
+		normB += b[i] * b[i]
+	}
+	if normA == 0 || normB == 0 {
+		return 0
+	}
+	return float32(float64(dotProduct) / (math.Sqrt(float64(normA)) * math.Sqrt(float64(normB))))
 }
 
 func NewAIService() *AIService {
@@ -145,7 +182,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	}
 
 	messages := []GroqMessage{
-		{Role: "system", Content: "Anda adalah KonsulKu AI. Jika pengguna menyebutkan nama dosen, Anda WAJIB memanggil fungsi 'get_lecturer_schedule'. Saat merangkum jawaban, Anda HARUS menampilkan semua detail yang ditemukan (Nama Lengkap, Gelar, Prodi, Status Ketersediaan, dan Jadwal Spesifik) dalam format yang rapi dan profesional. Jangan memberikan jawaban singkat jika data tersedia."},
+		{Role: "system", Content: "Anda adalah KonsulKu AI, asisten akademik kampus. Anda HANYA boleh menjawab pertanyaan terkait urusan kampus, bimbingan, jadwal dosen, atau topik akademik. Jika pengguna bertanya hal di luar itu (seperti politik, presiden, resep masakan, dll), tolak dengan sopan dan ingatkan peran Anda. Jika pengguna menyebutkan nama dosen, Anda WAJIB memanggil fungsi 'get_lecturer_schedule'. Saat merangkum jawaban dari database, Anda HARUS menampilkan semua detail yang ditemukan dalam format yang rapi."},
 		{Role: "user", Content: userMessage},
 	}
 
@@ -207,28 +244,85 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 }
 
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
-	if s.ApiKey == "" {
-		return "API Key Groq belum siap.", nil
+	geminiKey := os.Getenv("GEMINI_API_KEY")
+	if geminiKey == "" {
+		return "API Key Gemini belum di-set di file .env", nil
 	}
+
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiKey))
+	if err != nil {
+		return "Gagal inisialisasi Gemini: " + err.Error(), nil
+	}
+	defer client.Close()
+
+	// RAG IMPLEMENTATION: Chunking & Embeddings
+	// 1. Memotong isi dokumen jadi per 150 kata (lebih hemat token)
+	chunks := chunkText(fileContent, 150)
+
+	// 2. Mengubah teks menjadi Vector (Embeddings)
+	em := client.EmbeddingModel("gemini-embedding-2")
+	var chunkVectors [][]float32
+	for _, chunk := range chunks {
+		res, err := em.EmbedContent(ctx, genai.Text(chunk))
+		if err != nil {
+			// Jika gagal embed, fallback ke chunk pertama aja biar ga error
+			break
+		}
+		chunkVectors = append(chunkVectors, res.Embedding.Values)
+	}
+
+	// 3. Pertanyaan Inti (Query) yang ingin dicari di dokumen
+	query := "Tolong evaluasi latar belakang, perumusan masalah, dan metode penelitian secara mendalam."
+	resTanya, _ := em.EmbedContent(ctx, genai.Text(query))
+	vektorPertanyaan := resTanya.Embedding.Values
+
+	// 4. Semantic Search: Ambil 2 chunk paling relevan untuk di-review
+	bestScore1, bestScore2 := float32(-1.0), float32(-1.0)
+	bestChunk1, bestChunk2 := "", ""
+
+	if len(chunkVectors) > 0 {
+		for i, chunkVec := range chunkVectors {
+			score := cosineSimilarity(vektorPertanyaan, chunkVec)
+			if score > bestScore1 {
+				bestScore2 = bestScore1
+				bestChunk2 = bestChunk1
+				bestScore1 = score
+				bestChunk1 = chunks[i]
+			} else if score > bestScore2 {
+				bestScore2 = score
+				bestChunk2 = chunks[i]
+			}
+		}
+	} else {
+		bestChunk1 = fileContent // Fallback jika teks sangat pendek
+	}
+
+	gabunganTeksRelevan := bestChunk1 + "\n\n" + bestChunk2
+
+	// 5. Generative AI hanya merespon teks yang relevan
+	model := client.GenerativeModel("gemini-2.5-flash")
 
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik Profesional. Tinjau draft proposal ini:
+		Anda adalah Reviewer Akademik Profesional. Berdasarkan cuplikan dokumen proposal paling relevan berikut ini, tolong berikan review dan evaluasi singkat namun tajam.
 		Nama File: %s
-		--- ISI DRAFT ---
+		--- CUPLIKAN DOKUMEN ---
 		%s
-	`, fileName, fileContent)
+	`, fileName, gabunganTeksRelevan)
 
-	messages := []GroqMessage{
-		{Role: "user", Content: prompt},
-	}
-
-	resp, err := s.callGroq(messages, nil)
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		return "", err
+		return "Gagal menganalisis dokumen dengan Gemini: " + err.Error(), nil
 	}
 
-	if len(resp.Choices) > 0 {
-		return resp.Choices[0].Message.Content, nil
+	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+		var output string
+		for _, part := range resp.Candidates[0].Content.Parts {
+			if textPart, ok := part.(genai.Text); ok {
+				output += string(textPart)
+			}
+		}
+		return output, nil
 	}
 
 	return "Analisis gagal.", nil

@@ -10,7 +10,7 @@ export default function DosenChatPage() {
   const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  
+
   // Ambil state mhs dari navigasi DosenInboxChat jika ada
   const mhsData = location.state?.mhs;
   const targetUserName = mhsData?.nama_lengkap || `Mahasiswa (ID: ${targetUserID})`;
@@ -57,7 +57,7 @@ export default function DosenChatPage() {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -86,7 +86,7 @@ export default function DosenChatPage() {
       <Sidebar variant="dosen" />
       <div className="flex-1 flex flex-col ml-[260px]">
         <Topbar variant="dosen" />
-        
+
         <main className="flex-1 mt-[64px] flex flex-col overflow-hidden">
           {/* Header Chat */}
           <div className="bg-white border-b p-4 flex items-center justify-between shadow-sm z-10">
@@ -112,16 +112,15 @@ export default function DosenChatPage() {
                 <p className="text-sm italic">Belum ada diskusi dengan mahasiswa ini.</p>
               </div>
             )}
-            
+
             {messages.map((msg, idx) => {
               const isMe = msg.pengirim_id === currentUser?.id;
               return (
                 <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${
-                    isMe 
-                    ? 'bg-[#4A1D8F] text-white rounded-tr-none' 
-                    : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
-                  }`}>
+                  <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${isMe
+                      ? 'bg-[#4A1D8F] text-white rounded-tr-none'
+                      : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+                    }`}>
                     {msg.teks}
                   </div>
                 </div>

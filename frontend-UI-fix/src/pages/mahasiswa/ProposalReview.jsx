@@ -192,25 +192,29 @@ export default function ProposalReview() {
                 </div>
 
                 <div className="prose prose-sm max-w-none">
-                  {/* Sederhana: Pisahkan berdasarkan baris dan render */}
+                  {/* Sederhana: Pisahkan berdasarkan baris dan render dengan format bold */}
                   {result.split('\n').map((line, i) => {
+                    const formatBold = (text) => ({ __html: text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') });
+
                     if (line.startsWith('###')) {
-                      return <h3 key={i} className="text-lg font-bold text-[#4A1D8F] mt-4 mb-2">{line.replace('###', '')}</h3>;
+                      return <h3 key={i} className="text-lg font-bold text-[#4A1D8F] mt-4 mb-2" dangerouslySetInnerHTML={formatBold(line.replace('###', ''))} />;
                     }
                     if (line.startsWith('##')) {
-                      return <h2 key={i} className="text-xl font-bold text-[#4A1D8F] mt-6 mb-3">{line.replace('##', '')}</h2>;
+                      return <h2 key={i} className="text-xl font-bold text-[#4A1D8F] mt-6 mb-3" dangerouslySetInnerHTML={formatBold(line.replace('##', ''))} />;
                     }
-                    if (line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.') || line.startsWith('4.')) {
+                    if (line.match(/^\d+\./)) {
+                      const num = line.split('.')[0];
+                      const content = line.substring(line.indexOf('.') + 1);
                       return <div key={i} className="flex gap-3 mb-3 bg-white/50 p-3 rounded-lg border border-gray-50">
-                        <span className="font-bold text-[#4A1D8F]">{line.split('.')[0]}.</span>
-                        <p className="text-gray-700 leading-relaxed">{line.split('.').slice(1).join('.')}</p>
+                        <span className="font-bold text-[#4A1D8F]">{num}.</span>
+                        <p className="text-gray-700 leading-relaxed" dangerouslySetInnerHTML={formatBold(content)} />
                       </div>;
                     }
-                    if (line.startsWith('*') || line.startsWith('-')) {
-                      return <li key={i} className="ml-4 mb-1 text-gray-600">{line.replace(/^[\*\-]\s?/, '')}</li>;
+                    if (line.startsWith('* ') || line.startsWith('- ')) {
+                      return <li key={i} className="ml-4 mb-1 text-gray-600" dangerouslySetInnerHTML={formatBold(line.replace(/^[\*\-]\s?/, ''))} />;
                     }
                     if (line.trim() === '') return <br key={i} />;
-                    return <p key={i} className="mb-3 text-gray-700 leading-relaxed">{line}</p>;
+                    return <p key={i} className="mb-3 text-gray-700 leading-relaxed" dangerouslySetInnerHTML={formatBold(line)} />;
                   })}
                 </div>
 

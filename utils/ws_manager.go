@@ -27,6 +27,7 @@ func (m *WsManager) Register(userID uint, conn *websocket.Conn) {
 func (m *WsManager) Unregister(userID uint) {
 	m.Mu.Lock()
 	defer m.Mu.Unlock()
+	println("Unregistering user:", userID)
 	delete(m.Clients, userID)
 }
 
@@ -40,8 +41,13 @@ func (m *WsManager) BroadcastToUser(userID uint, message interface{}) {
 		err := conn.WriteJSON(message)
 		if err != nil {
 			// Jika gagal kirim (koneksi mati), hapus dari registry dan tutup koneksinya
+			println("Failed to send WS message to user", userID, ":", err.Error())
 			m.Unregister(userID)
 			conn.Close()
+		} else {
+			println("Successfully broadcasted WS message to user", userID)
 		}
+	} else {
+		println("User", userID, "is offline, skipping WS broadcast")
 	}
 }

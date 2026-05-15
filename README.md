@@ -5,10 +5,10 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://golang.org/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
-[![GORM](https://img.shields.io/badge/GORM-v1.25-blue?style=for-the-badge&logo=gorm&logoColor=white)](https://gorm.io/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![GORM](https://img.shields.io/badge/ORM-GORM-blue?style=for-the-badge&logo=gorm&logoColor=white)](https://gorm.io/)
 [![Groq AI](https://img.shields.io/badge/AI-Groq-orange?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com/)
-[![RAG](https://img.shields.io/badge/Architecture-RAG-orange?style=for-the-badge)](https://aws.amazon.com/what-is/retrieval-augmented-generation/)
-[![Agentic AI](https://img.shields.io/badge/Agentic-Function--Calling-red?style=for-the-badge)](https://ai.google.dev/docs/function_calling)
+[![Agentic AI](https://img.shields.io/badge/Architecture-Agentic--AI-red?style=for-the-badge)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge&logo=github-actions)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
@@ -106,9 +106,8 @@ This project proves the ability to not just write code, but to **lead, manage, a
 - **Go (Gin)**: High-performance backend with efficient concurrency handling.
 - **WebSocket**: Real-time bidirectional communication for chat and notifications.
 - **Dual-LLM (Groq + Gemini)**: Groq (Llama 3) for lightning-fast function calling, Gemini for massive context window analysis.
-- **Advanced RAG**: Vector Embeddings & In-memory Semantic Search to drastically reduce token usage and improve accuracy.
+- **Cloud Database (Supabase)**: Leveraging PostgreSQL on Supabase for scalable, production-ready data storage and management.
 - **Clean Architecture**: Separation of concerns (Handlers, Services, Repositories) for scalability and maintainability.
-- **MySQL (GORM)**: Robust relational data management with an ORM layer.
 
 ---
 
@@ -157,10 +156,10 @@ This project proves the ability to not just write code, but to **lead, manage, a
 - **XAMPP / MySQL Server**: Ensure your local MySQL server is running.
 - **API Keys**: Groq API & Google Gemini API.
 
-### 1. Database Setup (XAMPP)
-1. Open XAMPP Control Panel and start **MySQL**.
-2. Open phpMyAdmin (http://localhost/phpmyadmin) or your SQL client.
-3. Create a new database named `konsulku` (or matching your `.env` configuration).
+### 1. Database Setup (Supabase)
+1. Create a new project on [Supabase](https://supabase.com/).
+2. Get your **PostgreSQL Connection String** from the Database settings.
+3. Ensure the connection string is used as the `DATABASE_URL` in your `.env` file.
 
 ### 2. Backend Setup
 ```bash

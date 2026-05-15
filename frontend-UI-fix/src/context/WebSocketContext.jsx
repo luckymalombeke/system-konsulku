@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { WS_BASE_URL } from '../api';
 
 const WebSocketContext = createContext(null);
 
@@ -13,7 +14,7 @@ export const WebSocketProvider = ({ children }) => {
     // Buka koneksi WebSocket ke Backend
     // Kita kirim token lewat protokol websocket (biasanya via subprotocol atau query)
     // Di sini kita gunakan query param agar simpel
-    const ws = new WebSocket(`ws://localhost:8081/api/ws?token=${token}`);
+    const ws = new WebSocket(`${WS_BASE_URL}/api/ws?token=${token}`);
 
     ws.onopen = () => {
       console.log('✅ WebSocket Connected');

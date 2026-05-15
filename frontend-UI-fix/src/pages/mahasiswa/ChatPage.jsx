@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/Sidebar';
 import { Topbar } from '../../components/Topbar';
 import { Send, User, MessageSquare, MoreVertical, Edit2, Trash2, X } from 'lucide-react';
-import { getMessages, getDosenList, login, editMessage, deleteMessage } from '../../api'; // Pastikan API ini ada
+import { getMessages, getDosenList, login, editMessage, deleteMessage, API_BASE_URL } from '../../api'; // Pastikan API ini ada
 
 export default function ChatPage() {
   const { id: targetUserID } = useParams();
@@ -21,7 +21,7 @@ export default function ChatPage() {
       try {
         const msgData = await getMessages(targetUserID);
         setMessages(msgData || []);
-        
+
         // Cari info dosen (target)
         const dosenList = await getDosenList();
         const found = dosenList.find(d => d.user_id === parseInt(targetUserID));
@@ -72,9 +72,9 @@ export default function ChatPage() {
     try {
       // Panggil API Send Message
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:8081/api/chat`, {
+      const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -110,7 +110,7 @@ export default function ChatPage() {
       <Sidebar variant="mahasiswa" />
       <div className="flex-1 flex flex-col ml-[260px]">
         <Topbar variant="mahasiswa" />
-        
+
         <main className="flex-1 mt-[64px] flex flex-col overflow-hidden">
           {/* Header Chat */}
           <div className="bg-white border-b p-4 flex items-center justify-between shadow-sm z-10">
@@ -126,7 +126,7 @@ export default function ChatPage() {
               </div>
             </div>
             {targetUser && (
-              <button 
+              <button
                 onClick={() => setShowProfile(!showProfile)}
                 className="text-xs font-bold text-[#4A1D8F] bg-[#F0E9FF] px-3 py-1.5 rounded-lg hover:bg-[#E2D5FF] transition-colors"
               >
@@ -144,12 +144,12 @@ export default function ChatPage() {
                   <p className="text-sm italic">Belum ada percakapan. Mulai diskusi sekarang.</p>
                 </div>
               )}
-              
+
               {messages.map((msg, idx) => {
                 const isMe = msg.pengirim_id === currentUser?.id;
                 return (
                   <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
-                    
+
                     {isMe && !msg.dihapus && msg.id && (
                       <div className={`flex items-center mr-2 transition-opacity relative ${activeMenuId === msg.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         <button onClick={() => setActiveMenuId(activeMenuId === msg.id ? null : msg.id)} className="p-1 text-gray-400 hover:text-gray-600 bg-white rounded-full shadow-sm">
@@ -157,13 +157,13 @@ export default function ChatPage() {
                         </button>
                         {activeMenuId === msg.id && (
                           <div className="absolute right-0 bottom-full mb-1 bg-white border shadow-lg rounded-xl py-1 z-20 w-32 overflow-hidden">
-                            <button 
+                            <button
                               onClick={() => { setEditingMessageId(msg.id); setInputText(msg.teks); setActiveMenuId(null); }}
                               className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
                             >
                               <Edit2 size={14} /> Edit
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleDelete(msg.id)}
                               className="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
                             >
@@ -174,11 +174,10 @@ export default function ChatPage() {
                       </div>
                     )}
 
-                    <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${
-                      isMe 
-                      ? 'bg-[#4A1D8F] text-white rounded-tr-none' 
-                      : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
-                    } ${msg.dihapus ? 'italic opacity-60 bg-gray-100 text-gray-500 border-none' : ''}`}>
+                    <div className={`max-w-[70%] p-3 rounded-2xl shadow-sm text-sm ${isMe
+                        ? 'bg-[#4A1D8F] text-white rounded-tr-none'
+                        : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+                      } ${msg.dihapus ? 'italic opacity-60 bg-gray-100 text-gray-500 border-none' : ''}`}>
                       {msg.teks}
                       {msg.diedit && !msg.dihapus && <span className="text-[10px] opacity-70 ml-2 font-medium">(diedit)</span>}
                     </div>

@@ -75,6 +75,10 @@ func HandleEditMessage(c *gin.Context) {
 		return
 	}
 
+	// Ambil data target_user_id dari pesan untuk broadcast (opsional, tapi bagus buat real-time)
+	// Untuk sederhananya kita broadcast ID pesan saja
+	// (Idealnya ambil target_id dari DB, tapi di sini kita pakai data minimal)
+	
 	c.JSON(200, gin.H{"message": "Pesan berhasil diedit"})
 }
 

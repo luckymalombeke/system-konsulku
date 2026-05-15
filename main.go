@@ -7,7 +7,6 @@ import (
 	"konsulku/middlewares"
 	"konsulku/models"
 	"konsulku/utils"
-	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +15,9 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// Load .env file jika ada (biasanya di local development)
+	// Di production (Render/Railway), kita set env variables di dashboard mereka
+	_ = godotenv.Load()
 
 	// Setup Logrus
 	logrus.SetFormatter(&logrus.JSONFormatter{})
@@ -95,7 +93,7 @@ func main() {
 	}
 
 	fmt.Printf("Server KonsulKu Jalan di :%s\n", port)
-	err = r.Run(":" + port)
+	err := r.Run(":" + port)
 	if err != nil {
 		fmt.Println("SERVER ERROR KELUAR:", err)
 	}

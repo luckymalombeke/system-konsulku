@@ -1,12 +1,13 @@
 import React from 'react';
 import { User } from 'lucide-react';
+import { API_BASE_URL } from '../api';
 
 export function AvatarPlaceholder({ size = 40, className = '', src = null }) {
   // Pastikan src bukan string kosong atau "null"
   const hasImage = src && src !== "" && src !== "null";
 
   if (hasImage) {
-    const fullSrc = src.startsWith('http') ? src : `http://localhost:8081${src}`;
+    const fullSrc = src.startsWith('http') ? src : `${API_BASE_URL}${src}`;
     return (
       <div 
         className={`rounded-full overflow-hidden border-2 border-gray-100 flex-shrink-0 ${className}`}

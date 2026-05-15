@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
@@ -260,15 +261,10 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	// Gunakan model Gemini 1.5 Flash yang punya context window besar
 	model := client.GenerativeModel("gemini-1.5-flash-latest")
 
-	// Bersihkan teks dari karakter non-UTF8 dan karakter kontrol yang aneh
-	cleanContent := strings.ToValidUTF8(fileContent, "")
-	safeContent := strings.Map(func(r rune) rune {
-		// Hanya izinkan karakter yang bisa diprint, newline, dan tab
-		if (r < 32 && r != '\n' && r != '\r' && r != '\t') || r == utf8.RuneError {
-			return -1
-		}
-		return r
-	}, cleanContent)
+	// Gunakan Regex untuk membuang semua karakter selain huruf, angka, tanda baca standar, dan spasi
+	// Ini adalah cara paling aman untuk menghindari error "invalid UTF-8" di sistem Google
+	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
+	safeContent := reg.ReplaceAllString(fileContent, "")
 
 	if len(safeContent) > 50000 {
 		safeContent = safeContent[:50000] + "... (teks dipotong karena terlalu panjang)"
@@ -287,7 +283,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 		2. Evaluasi Rumusan Masalah
 		3. Evaluasi Metode Penelitian
 		4. Saran Perbaikan Spesifik
-	`, strings.ToValidUTF8(fileName, ""), safeContent)
+	`, reg.ReplaceAllString(fileName, ""), safeContent)
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {

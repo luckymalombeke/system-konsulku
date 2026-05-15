@@ -308,52 +308,70 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
-// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Groq Llama 3.3-70B
+// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Google Gemini 1.5 Flash (Kapasitas Besar)
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
-	if s.ApiKey == "" {
-		return "API Key Groq belum di-set di file .env / Railway", nil
+	if s.GeminiApiKey == "" {
+		return "GEMINI_API_KEY belum di-set di file .env", nil
 	}
 
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
-	// Batasi teks agar tidak melebihi kuota TPM (Tokens Per Minute) Groq.
-	// Karena akun Anda memiliki limit 12.000 TPM, kita set ke 35.000 karakter (~9.000 token)
-	if len(safeContent) > 35000 {
-		safeContent = safeContent[:35000] + "... (teks dipotong agar tidak melebihi kuota API Groq)"
+	// Gemini 1.5 Flash punya limit 1 Juta Token. 
+	// Kita set batas ke 1.000.000 karakter (sangat cukup untuk skripsi tebal)
+	if len(safeContent) > 1000000 {
+		safeContent = safeContent[:1000000] + "... (teks sangat panjang dipotong pada 1 juta karakter)"
 	}
 
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik Profesional KonsulKu. Tolong berikan review, evaluasi, dan saran perbaikan yang tajam untuk proposal mahasiswa berikut ini:
+		Anda adalah Reviewer Akademik yang Sangat Kritis dan Teliti (Dosen Pembimbing Senior). 
+		Tugas Anda adalah membedah proposal mahasiswa berikut dan mencari KEJANGGALAN serta KETIDAKSINKRONAN antar bagian.
+		
 		Nama File: %s
 		
 		--- ISI PROPOSAL ---
 		%s
 		--- AKHIR PROPOSAL ---
 		
-		Berikan review dalam Bahasa Indonesia yang mencakup:
-		1. Evaluasi Latar Belakang & Urgensi
-		2. Evaluasi Rumusan Masalah
-		3. Evaluasi Metode Penelitian
-		4. Saran Perbaikan Spesifik
+		Tolong berikan analisis tajam dalam Bahasa Indonesia dengan format berikut:
+		
+		### 🔍 ANALISIS SINKRONISASI (CRITICAL)
+		Cek apakah Judul, Rumusan Masalah, dan Tujuan sudah sinkron. Cari jika ada kontradiksi.
+		
+		### ⚠️ KEJANGGALAN & KRITIK PEDAS
+		1. Evaluasi Latar Belakang: Apakah masalahnya nyata atau hanya dibuat-buat? Apakah urgensinya terlihat?
+		2. Evaluasi Metode: Apakah metode ini BENAR-BENAR bisa menjawab rumusan masalah di atas? Sebutkan jika ada ketidakcocokan.
+		
+		### 💡 REKOMENDASI PERBAIKAN DARURAT
+		Berikan langkah konkret yang harus dilakukan mahasiswa agar proposal ini layak diajukan ke sidang.
 	`, fileName, safeContent)
 
-	messages := []GroqMessage{
-		{Role: "system", Content: "Anda adalah asisten akademik profesional yang ahli dalam mereview proposal penelitian mahasiswa."},
-		{Role: "user", Content: prompt},
-	}
-
-	// PAKAI MODEL 70B UNTUK ANALISIS MENDALAM
-	resp, err := s.callGroq(messages, nil, "llama-3.3-70b-versatile")
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(s.GeminiApiKey))
 	if err != nil {
-		return "Gagal menganalisis dokumen dengan Groq: " + err.Error(), nil
+		return "", fmt.Errorf("gagal inisialisasi Gemini: %v", err)
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-1.5-flash")
+	
+	// Set temperature rendah agar analisis tetap fokus dan akademis
+	model.SetTemperature(0.3)
+
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", fmt.Errorf("error Gemini: %v", err)
 	}
 
-	if len(resp.Choices) > 0 {
-		return resp.Choices[0].Message.Content, nil
+	if len(resp.Candidates) > 0 && resp.Candidates[0].Content != nil {
+		var fullResponse strings.Builder
+		for _, part := range resp.Candidates[0].Content.Parts {
+			fullResponse.WriteString(fmt.Sprintf("%v", part))
+		}
+		return fullResponse.String(), nil
 	}
 
-	return "Analisis gagal, Groq tidak memberikan jawaban.", nil
+	return "Analisis gagal, Gemini tidak memberikan jawaban.", nil
 }
 
 // ChatWithProposal menangani tanya jawab interaktif berbasis isi dokumen (RAG)

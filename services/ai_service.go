@@ -261,7 +261,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	chunks := chunkText(fileContent, 150)
 
 	// 2. Mengubah teks menjadi Vector (Embeddings)
-	em := client.EmbeddingModel("text-embedding-004")
+	em := client.EmbeddingModel("embedding-001")
 	var chunkVectors [][]float32
 	for _, chunk := range chunks {
 		res, err := em.EmbedContent(ctx, genai.Text(chunk))

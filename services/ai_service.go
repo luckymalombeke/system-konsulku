@@ -353,7 +353,8 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-1.5-flash")
+	// Gunakan model gemini-2.0-flash (Sesuai daftar model yang tersedia di 2026)
+	model := client.GenerativeModel("gemini-2.0-flash")
 	
 	// Set temperature rendah agar analisis tetap fokus dan akademis
 	model.SetTemperature(0.3)

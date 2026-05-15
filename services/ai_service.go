@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
+	"unicode/utf8"
 )
 
 type AIService struct {
@@ -260,8 +261,14 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	model := client.GenerativeModel("gemini-1.5-flash")
 
 	// Kita batasi teksnya sedikit agar tidak terlalu panjang (opsional)
-	// 50.000 karakter sudah sangat cukup untuk sebuah proposal
-	safeContent := fileContent
+	// Dan pastikan teks adalah valid UTF-8 untuk menghindari error proto
+	safeContent := strings.Map(func(r rune) rune {
+		if r == utf8.RuneError {
+			return -1
+		}
+		return r
+	}, fileContent)
+
 	if len(safeContent) > 50000 {
 		safeContent = safeContent[:50000] + "... (teks dipotong karena terlalu panjang)"
 	}

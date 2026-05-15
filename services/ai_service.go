@@ -211,7 +211,7 @@ func (s *AIService) GetConsultationAdvice(topic string, problem string) (string,
 	}
 
 	// Gunakan model 8b untuk saran cepat
-	resp, err := s.callGroq(messages, nil, "llama3-8b-8192")
+	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant")
 	if err != nil {
 		return s.generateSmartFallback(topic, problem), nil
 	}
@@ -254,7 +254,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	}
 
 	// Gunakan model 8b untuk asisten umum (lebih hemat & cepat)
-	resp, err := s.callGroq(messages, tools, "llama3-8b-8192")
+	resp, err := s.callGroq(messages, tools, "llama-3.1-8b-instant")
 	if err != nil {
 		return "Gagal di panggilan pertama: " + err.Error(), nil
 	}
@@ -285,7 +285,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 					Content:    dbResult,
 				})
 
-				resp2, err := s.callGroq(messages, nil, "llama3-8b-8192")
+				resp2, err := s.callGroq(messages, nil, "llama-3.1-8b-instant")
 				if err != nil {
 					return "Gagal merangkum jawaban: " + err.Error(), nil
 				}
@@ -390,7 +390,7 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 	}
 
 	// PAKAI MODEL 8B UNTUK CHAT INTERAKTIF (CEPAT & LIMIT TINGGI)
-	resp, err := s.callGroq(messages, nil, "llama3-8b-8192")
+	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant")
 	if err != nil {
 		return "Gagal mendapatkan respon dari AI: " + err.Error(), nil
 	}

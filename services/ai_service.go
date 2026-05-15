@@ -246,32 +246,21 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 
 // AnalyzeProposal menangani evaluasi dokumen proposal (Triggering redeploy with latest SDK)
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
-	geminiKey := os.Getenv("GEMINI_API_KEY")
-	if geminiKey == "" {
-		return "API Key Gemini belum di-set di file .env / Railway", nil
+	if s.ApiKey == "" {
+		return "API Key Groq belum di-set di file .env / Railway", nil
 	}
-
-	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiKey))
-	if err != nil {
-		return "Gagal inisialisasi Gemini: " + err.Error(), nil
-	}
-	defer client.Close()
-
-	// Gunakan model Gemini Pro (lebih stabil untuk semua jenis API Key)
-	model := client.GenerativeModel("gemini-pro")
 
 	// Gunakan Regex untuk membuang semua karakter selain huruf, angka, tanda baca standar, dan spasi
-	// Ini adalah cara paling aman untuk menghindari error "invalid UTF-8" di sistem Google
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
-	if len(safeContent) > 50000 {
-		safeContent = safeContent[:50000] + "... (teks dipotong karena terlalu panjang)"
+	// Batasi teks agar tidak melebihi kuota token Groq (Llama 3 biasanya oke sampai 15k-20k kata)
+	if len(safeContent) > 40000 {
+		safeContent = safeContent[:40000] + "... (teks dipotong karena terlalu panjang)"
 	}
 
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik Profesional. Tolong berikan review, evaluasi, dan saran perbaikan yang tajam untuk proposal mahasiswa berikut ini:
+		Anda adalah Reviewer Akademik Profesional KonsulKu. Tolong berikan review, evaluasi, dan saran perbaikan yang tajam untuk proposal mahasiswa berikut ini:
 		Nama File: %s
 		
 		--- ISI PROPOSAL ---
@@ -283,24 +272,23 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 		2. Evaluasi Rumusan Masalah
 		3. Evaluasi Metode Penelitian
 		4. Saran Perbaikan Spesifik
-	`, reg.ReplaceAllString(fileName, ""), safeContent)
+	`, fileName, safeContent)
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	messages := []GroqMessage{
+		{Role: "system", Content: "Anda adalah asisten akademik profesional yang ahli dalam mereview proposal penelitian mahasiswa."},
+		{Role: "user", Content: prompt},
+	}
+
+	resp, err := s.callGroq(messages, nil)
 	if err != nil {
-		return "Gagal menganalisis dokumen dengan Gemini: " + err.Error(), nil
+		return "Gagal menganalisis dokumen dengan Groq: " + err.Error(), nil
 	}
 
-	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
-		var output string
-		for _, part := range resp.Candidates[0].Content.Parts {
-			if textPart, ok := part.(genai.Text); ok {
-				output += string(textPart)
-			}
-		}
-		return output, nil
+	if len(resp.Choices) > 0 {
+		return resp.Choices[0].Message.Content, nil
 	}
 
-	return "Analisis gagal, AI tidak memberikan jawaban.", nil
+	return "Analisis gagal, Groq tidak memberikan jawaban.", nil
 }
 
 func getLecturerInfoFromDB(name string) string {

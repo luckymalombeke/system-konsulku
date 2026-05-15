@@ -363,8 +363,8 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 	contextText, err := s.GetRelevantContext(question, fullText)
 	if err != nil || contextText == "" {
 		contextText = fullText
-		if len(contextText) > 150000 {
-			contextText = contextText[:150000]
+		if len(contextText) > 35000 {
+			contextText = contextText[:35000]
 		}
 	}
 

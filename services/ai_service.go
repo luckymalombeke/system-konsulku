@@ -16,7 +16,6 @@ import (
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
-	"unicode/utf8"
 )
 
 type AIService struct {

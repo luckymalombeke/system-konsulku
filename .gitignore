@@ -50,3 +50,8 @@ Thumbs.db
 # Project specific
 temp_build.exe
 hash_temp.go
+
+# Scratch & Temporary Files
+scratch_list_models.go
+demo_rag.go
+models.txt

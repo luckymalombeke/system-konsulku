@@ -274,7 +274,10 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 
 	// 3. Pertanyaan Inti (Query) yang ingin dicari di dokumen
 	query := "Tolong evaluasi latar belakang, perumusan masalah, dan metode penelitian secara mendalam."
-	resTanya, _ := em.EmbedContent(ctx, genai.Text(query))
+	resTanya, err := em.EmbedContent(ctx, genai.Text(query))
+	if err != nil {
+		return "Gagal membuat embedding pertanyaan: " + err.Error(), nil
+	}
 	vektorPertanyaan := resTanya.Embedding.Values
 
 	// 4. Semantic Search: Ambil 2 chunk paling relevan untuk di-review

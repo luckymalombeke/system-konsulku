@@ -170,6 +170,13 @@ export const analyzeProposal = (file) => {
   });
 };
 
+export const chatWithProposal = (fileName, fullText, question) => {
+  return apiCall('/api/ai/chat-proposal', {
+    method: 'POST',
+    body: JSON.stringify({ fileName, fullText, question }),
+  });
+};
+
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');

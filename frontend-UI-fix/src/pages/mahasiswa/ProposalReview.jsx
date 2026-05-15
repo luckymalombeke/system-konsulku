@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../../components/Layout';
-import { analyzeProposal } from '../../api';
+import { analyzeProposal, chatWithProposal } from '../../api';
 import { 
   FileText, 
   Upload, 
@@ -9,20 +9,38 @@ import {
   Loader2, 
   Sparkles,
   ArrowRight,
-  FileSearch
+  FileSearch,
+  Send,
+  User,
+  Bot
 } from 'lucide-react';
 
 export default function ProposalReview() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [extractedText, setExtractedText] = useState('');
   const [error, setError] = useState(null);
+  
+  // Chat States
+  const [chatMessages, setChatMessages] = useState([]);
+  const [question, setQuestion] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      if (selectedFile.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('Ukuran file maksimal 5MB');
+      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+        setError('Ukuran file maksimal 10MB');
         setFile(null);
         return;
       }
@@ -40,10 +58,12 @@ export default function ProposalReview() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setChatMessages([]);
 
     try {
       const data = await analyzeProposal(file);
       setResult(data.analysis);
+      setExtractedText(data.extractedText);
     } catch (err) {
       setError(err.message || 'Gagal menganalisis proposal');
     } finally {
@@ -51,23 +71,68 @@ export default function ProposalReview() {
     }
   };
 
+  const handleChat = async (e) => {
+    e.preventDefault();
+    if (!question.trim() || chatLoading) return;
+
+    const userQ = question.trim();
+    setChatMessages(prev => [...prev, { role: 'user', content: userQ }]);
+    setQuestion('');
+    setChatLoading(true);
+
+    try {
+      const data = await chatWithProposal(file.name, extractedText, userQ);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'error', content: 'Gagal mendapatkan jawaban: ' + err.message }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const formatAIResponse = (text) => {
+    return text.split('\n').map((line, i) => {
+      const formatBold = (t) => ({ __html: t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') });
+
+      if (line.startsWith('###')) {
+        return <h3 key={i} className="text-lg font-bold text-[#4A1D8F] mt-4 mb-2" dangerouslySetInnerHTML={formatBold(line.replace('###', ''))} />;
+      }
+      if (line.startsWith('##')) {
+        return <h2 key={i} className="text-xl font-bold text-[#4A1D8F] mt-6 mb-3" dangerouslySetInnerHTML={formatBold(line.replace('##', ''))} />;
+      }
+      if (line.match(/^\d+\./)) {
+        const num = line.split('.')[0];
+        const content = line.substring(line.indexOf('.') + 1);
+        return <div key={i} className="flex gap-3 mb-3 bg-white/50 p-3 rounded-lg border border-gray-50">
+          <span className="font-bold text-[#4A1D8F]">{num}.</span>
+          <p className="text-gray-700 leading-relaxed" dangerouslySetInnerHTML={formatBold(content)} />
+        </div>;
+      }
+      if (line.startsWith('* ') || line.startsWith('- ')) {
+        return <li key={i} className="ml-4 mb-1 text-gray-600" dangerouslySetInnerHTML={formatBold(line.replace(/^[\*\-]\s?/, ''))} />;
+      }
+      if (line.trim() === '') return <br key={i} />;
+      return <p key={i} className="mb-3 text-gray-700 leading-relaxed" dangerouslySetInnerHTML={formatBold(line)} />;
+    });
+  };
+
   return (
     <Layout role="mahasiswa">
-      <div className="max-w-4xl mx-auto space-y-6 animate-slide-up">
+      <div className="max-w-4xl mx-auto space-y-6 animate-slide-up pb-20">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Sparkles className="text-yellow-500" size={24} />
-              AI Proposal Reviewer
+              AI Proposal Expert
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Dapatkan feedback instan untuk draft proposal skripsi Anda menggunakan kecerdasan buatan.
+              Analisis mendalam dan diskusi interaktif untuk proposal skripsi Anda.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-medium bg-[#F0E9FF] text-[#4A1D8F] px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 text-xs font-medium bg-[#F0E9FF] text-[#4A1D8F] px-3 py-1.5 rounded-full border border-[#4A1D8F]/10">
             <CheckCircle size={14} />
-            Powered by Gemini RAG
+            Groq Llama 3.3 + RAG
           </div>
         </div>
 
@@ -92,7 +157,7 @@ export default function ProposalReview() {
                     type="file" 
                     className="hidden" 
                     onChange={handleFileChange}
-                    accept=".txt,.pdf,.doc,.docx"
+                    accept=".txt,.pdf,.docx"
                   />
                   
                   {file ? (
@@ -113,7 +178,7 @@ export default function ProposalReview() {
                         <Upload size={20} />
                       </div>
                       <p className="text-xs text-gray-500">
-                        Klik untuk upload draft (PDF/TXT)
+                        Klik untuk upload draft (PDF/DOCX)
                       </p>
                     </div>
                   )}
@@ -147,16 +212,12 @@ export default function ProposalReview() {
                     </>
                   )}
                 </button>
-                
-                <p className="text-[10px] text-gray-400 text-center leading-relaxed">
-                  AI akan membaca isi file Anda dan memberikan rekomendasi persiapan sebelum bimbingan.
-                </p>
               </div>
             </div>
           </div>
 
           {/* Result Section */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 space-y-6">
             {!result && !loading ? (
               <div className="glass-panel h-[400px] flex flex-col items-center justify-center text-center p-8 border-dashed">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -164,7 +225,7 @@ export default function ProposalReview() {
                 </div>
                 <h4 className="text-gray-600 font-medium">Belum Ada Analisis</h4>
                 <p className="text-gray-400 text-sm mt-2 max-w-xs">
-                  Upload file proposal Anda di samping untuk melihat feedback cerdas dari AI Assistant.
+                  Upload file proposal Anda di samping untuk mendapatkan feedback instan dan diskusi interaktif.
                 </p>
               </div>
             ) : loading ? (
@@ -174,58 +235,112 @@ export default function ProposalReview() {
                   <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#4A1D8F]" size={24} />
                 </div>
                 <h4 className="mt-6 font-semibold text-gray-800">Menganalisis Draft Anda</h4>
-                <p className="text-gray-500 text-sm mt-2">Ini mungkin memakan waktu beberapa detik...</p>
+                <p className="text-gray-500 text-sm mt-2">Menyiapkan review akademik mendalam...</p>
               </div>
             ) : (
-              <div className="glass-panel p-6 animate-fade-in">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <CheckCircle className="text-green-500" size={20} />
-                    Hasil Analisis AI
-                  </h3>
-                  <button 
-                    onClick={() => {setResult(null); setFile(null);}}
-                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    Reset
-                  </button>
+              <>
+                <div className="glass-panel p-6 animate-fade-in">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                    <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <CheckCircle className="text-green-500" size={20} />
+                      Review Utama AI
+                    </h3>
+                    <button 
+                      onClick={() => {setResult(null); setFile(null); setChatMessages([]);}}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  <div className="prose prose-sm max-w-none">
+                    {formatAIResponse(result)}
+                  </div>
                 </div>
 
-                <div className="prose prose-sm max-w-none">
-                  {/* Sederhana: Pisahkan berdasarkan baris dan render dengan format bold */}
-                  {result.split('\n').map((line, i) => {
-                    const formatBold = (text) => ({ __html: text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') });
+                {/* Interactive Chat Section */}
+                <div className="glass-panel p-6 animate-fade-in border-t-4 border-t-[#4A1D8F]">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="w-8 h-8 bg-[#4A1D8F] text-white rounded-lg flex items-center justify-center">
+                      <Bot size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">Tanya Jawab Proposal</h3>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Powered by RAG Engine</p>
+                    </div>
+                  </div>
 
-                    if (line.startsWith('###')) {
-                      return <h3 key={i} className="text-lg font-bold text-[#4A1D8F] mt-4 mb-2" dangerouslySetInnerHTML={formatBold(line.replace('###', ''))} />;
-                    }
-                    if (line.startsWith('##')) {
-                      return <h2 key={i} className="text-xl font-bold text-[#4A1D8F] mt-6 mb-3" dangerouslySetInnerHTML={formatBold(line.replace('##', ''))} />;
-                    }
-                    if (line.match(/^\d+\./)) {
-                      const num = line.split('.')[0];
-                      const content = line.substring(line.indexOf('.') + 1);
-                      return <div key={i} className="flex gap-3 mb-3 bg-white/50 p-3 rounded-lg border border-gray-50">
-                        <span className="font-bold text-[#4A1D8F]">{num}.</span>
-                        <p className="text-gray-700 leading-relaxed" dangerouslySetInnerHTML={formatBold(content)} />
-                      </div>;
-                    }
-                    if (line.startsWith('* ') || line.startsWith('- ')) {
-                      return <li key={i} className="ml-4 mb-1 text-gray-600" dangerouslySetInnerHTML={formatBold(line.replace(/^[\*\-]\s?/, ''))} />;
-                    }
-                    if (line.trim() === '') return <br key={i} />;
-                    return <p key={i} className="mb-3 text-gray-700 leading-relaxed" dangerouslySetInnerHTML={formatBold(line)} />;
-                  })}
-                </div>
+                  {/* Chat History */}
+                  <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {chatMessages.length === 0 && (
+                      <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <p className="text-sm text-gray-400">Ada bagian yang kurang jelas? Tanyakan langsung di bawah!</p>
+                        <div className="flex flex-wrap justify-center gap-2 mt-4 px-4">
+                          {["Apa saran untuk Bab 3?", "Apakah judulnya sudah oke?", "Metode apa yang cocok?"].map((tip, idx) => (
+                            <button 
+                              key={idx}
+                              onClick={() => setQuestion(tip)}
+                              className="text-[10px] bg-white border border-gray-200 px-3 py-1.5 rounded-full text-gray-500 hover:border-[#4A1D8F] hover:text-[#4A1D8F] transition-all"
+                            >
+                              {tip}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                <div className="mt-8 p-4 bg-[#F8F7FF] rounded-xl border border-[#4A1D8F]/10">
-                  <h5 className="text-xs font-bold text-[#4A1D8F] uppercase tracking-wider mb-2">Tips Bimbingan</h5>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Gunakan hasil analisis ini sebagai bahan diskusi saat bertemu dosen. 
-                    Anda bisa menunjukkan bagian yang disorot oleh AI untuk mendapatkan feedback lebih lanjut dari dosen pembimbing.
-                  </p>
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${
+                          msg.role === 'user' 
+                            ? 'bg-[#4A1D8F] text-white rounded-tr-none' 
+                            : msg.role === 'error'
+                            ? 'bg-red-50 text-red-600 border border-red-100'
+                            : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-1 opacity-70">
+                            {msg.role === 'user' ? <User size={12} /> : <Bot size={12} />}
+                            <span className="text-[10px] font-bold uppercase">{msg.role === 'user' ? 'Anda' : 'AI Assistant'}</span>
+                          </div>
+                          <div className="leading-relaxed">
+                            {msg.role === 'assistant' ? formatAIResponse(msg.content) : msg.content}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {chatLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-100 p-4 rounded-2xl rounded-tl-none flex items-center gap-2">
+                          <Loader2 size={16} className="animate-spin text-[#4A1D8F]" />
+                          <span className="text-xs text-gray-500">Berpikir...</span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  {/* Chat Input */}
+                  <form onSubmit={handleChat} className="relative">
+                    <input 
+                      type="text"
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      placeholder="Tanyakan sesuatu tentang proposal Anda..."
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-4 pr-12 text-sm focus:ring-2 focus:ring-[#4A1D8F]/20 focus:border-[#4A1D8F] outline-none transition-all"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={!question.trim() || chatLoading}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all
+                        ${!question.trim() || chatLoading ? 'text-gray-300' : 'bg-[#4A1D8F] text-white shadow-md hover:scale-105'}
+                      `}
+                    >
+                      <Send size={16} />
+                    </button>
+                  </form>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>

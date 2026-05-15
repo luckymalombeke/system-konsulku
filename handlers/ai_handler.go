@@ -182,8 +182,36 @@ func HandleProposalAnalysis(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"fileName": header.Filename,
-		"analysis": analysis,
+		"fileName":      header.Filename,
+		"analysis":      analysis,
+		"extractedText": extractedText,
+	})
+}
+
+// ChatWithProposalRequest untuk request tanya jawab proposal
+type ChatWithProposalRequest struct {
+	FileName string `json:"fileName" binding:"required"`
+	FullText string `json:"fullText" binding:"required"`
+	Question string `json:"question" binding:"required"`
+}
+
+// HandleChatWithProposal memproses pertanyaan spesifik tentang isi proposal
+func HandleChatWithProposal(c *gin.Context) {
+	var req ChatWithProposalRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "FileName, FullText, dan Question harus diisi"})
+		return
+	}
+
+	service := GetAIService()
+	answer, err := service.ChatWithProposal(req.FileName, req.FullText, req.Question)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"answer": answer,
 	})
 }
 

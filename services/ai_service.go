@@ -12,11 +12,16 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/google/generative-ai-go/genai"
+	"google.golang.org/api/option"
+	"context"
 )
 
 type AIService struct {
-	ApiKey string
-	Model  string
+	ApiKey       string
+	GeminiApiKey string
+	Model        string
 }
 // Fungsi untuk memotong teks panjang (Chunking)
 func chunkText(text string, chunkSize int) []string {
@@ -53,13 +58,71 @@ func cosineSimilarity(a, b []float32) float32 {
 
 func NewAIService() *AIService {
 	apiKey := os.Getenv("GROQ_API_KEY")
+	geminiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		fmt.Println("[AI Service] ❌ Warning: GROQ_API_KEY tidak ada.")
 	}
 	return &AIService{
-		ApiKey: apiKey,
-		Model:  "llama-3.3-70b-versatile",
+		ApiKey:       apiKey,
+		GeminiApiKey: geminiKey,
+		Model:        "llama-3.3-70b-versatile",
 	}
+}
+
+// GetEmbedding mengubah teks menjadi vector menggunakan Google Gemini Embedding
+func (s *AIService) GetEmbedding(text string) ([]float32, error) {
+	if s.GeminiApiKey == "" {
+		return nil, fmt.Errorf("GEMINI_API_KEY belum di-set")
+	}
+
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(s.GeminiApiKey))
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	em := client.EmbeddingModel("text-embedding-004")
+	res, err := em.EmbedContent(ctx, genai.Text(text))
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Embedding.Values, nil
+}
+
+// GetRelevantContext mencari potongan teks paling relevan dari sebuah dokumen (RAG)
+func (s *AIService) GetRelevantContext(query string, fullText string) (string, error) {
+	// 1. Chunking dokumen (potong per 300 kata agar konteks tetap terjaga)
+	chunks := chunkText(fullText, 300)
+	if len(chunks) == 0 {
+		return "", nil
+	}
+
+	// 2. Dapatkan Embedding untuk Query (Pertanyaan)
+	queryVec, err := s.GetEmbedding(query)
+	if err != nil {
+		return "", err
+	}
+
+	// 3. Loop untuk mencari chunk paling relevan (Semantic Search)
+	bestScore := float32(-1.0)
+	bestChunk := ""
+
+	for _, chunk := range chunks {
+		chunkVec, err := s.GetEmbedding(chunk)
+		if err != nil {
+			continue // Skip jika gagal
+		}
+
+		score := cosineSimilarity(queryVec, chunkVec)
+		if score > bestScore {
+			bestScore = score
+			bestChunk = chunk
+		}
+	}
+
+	return bestChunk, nil
 }
 
 // Groq Structures - Updated for better compatibility
@@ -240,7 +303,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
-// AnalyzeProposal menangani evaluasi dokumen proposal (Triggering redeploy with latest SDK)
+// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Groq Llama 3
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
 	if s.ApiKey == "" {
 		return "API Key Groq belum di-set di file .env / Railway", nil
@@ -250,9 +313,11 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
-	// Batasi teks agar tidak melebihi kuota token Groq (Llama 3 biasanya oke sampai 15k-20k kata)
-	if len(safeContent) > 40000 {
-		safeContent = safeContent[:40000] + "... (teks dipotong karena terlalu panjang)"
+	// Batasi teks agar tidak melebihi kuota token Groq.
+	// Llama 3.3-70b-versatile mendukung hingga 128k context window (~500k karakter).
+	// Kita set ke 150k karakter (~35k-40k token) agar tetap aman dan tidak terlalu lemot.
+	if len(safeContent) > 150000 {
+		safeContent = safeContent[:150000] + "... (teks dipotong karena sangat panjang, hubungi admin untuk batas lebih besar)"
 	}
 
 	prompt := fmt.Sprintf(`
@@ -285,6 +350,56 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	}
 
 	return "Analisis gagal, Groq tidak memberikan jawaban.", nil
+}
+
+// ChatWithProposal menangani tanya jawab interaktif berbasis isi dokumen (RAG)
+func (s *AIService) ChatWithProposal(fileName string, fullText string, question string) (string, error) {
+	if s.ApiKey == "" {
+		return "API Key belum siap.", nil
+	}
+
+	// 1. Ambil konteks relevan menggunakan RAG (Embedding + Cosine Similarity)
+	// Jika gagal atau teks pendek, kita gunakan fullText sebagai fallback
+	contextText, err := s.GetRelevantContext(question, fullText)
+	if err != nil || contextText == "" {
+		contextText = fullText
+		if len(contextText) > 150000 {
+			contextText = contextText[:150000]
+		}
+	}
+
+	// 2. Susun Prompt yang terarah (Targeted Prompt)
+	prompt := fmt.Sprintf(`
+		Anda adalah Reviewer Akademik Profesional KonsulKu. 
+		Anda sedang berdiskusi dengan mahasiswa tentang proposalnya yang berjudul: "%s".
+		
+		BERIKUT ADALAH POTONGAN KONTEKS DOKUMEN YANG RELEVAN:
+		---
+		%s
+		---
+		
+		PERTANYAAN MAHASISWA: "%s"
+		
+		Berikan jawaban yang spesifik, bernada akademis, namun tetap suportif berdasarkan potongan dokumen di atas. 
+		Jika informasi tidak ditemukan di dokumen tersebut, sampaikan dengan sopan namun tetap berikan saran umum yang relevan untuk penelitian tersebut.
+	`, fileName, contextText, question)
+
+	messages := []GroqMessage{
+		{Role: "system", Content: "Anda adalah asisten akademik yang membantu mahasiswa memperbaiki proposal penelitian mereka secara interaktif melalui diskusi tanya-jawab."},
+		{Role: "user", Content: prompt},
+	}
+
+	// 3. Panggil Groq untuk mendapatkan respon
+	resp, err := s.callGroq(messages, nil)
+	if err != nil {
+		return "Gagal mendapatkan respon dari AI: " + err.Error(), nil
+	}
+
+	if len(resp.Choices) > 0 {
+		return resp.Choices[0].Message.Content, nil
+	}
+
+	return "Maaf, AI tidak memberikan respon spesifik saat ini.", nil
 }
 
 func getLecturerInfoFromDB(name string) string {

@@ -261,7 +261,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	chunks := chunkText(fileContent, 150)
 
 	// 2. Mengubah teks menjadi Vector (Embeddings)
-	em := client.EmbeddingModel("gemini-embedding-2")
+	em := client.EmbeddingModel("text-embedding-004")
 	var chunkVectors [][]float32
 	for _, chunk := range chunks {
 		res, err := em.EmbedContent(ctx, genai.Text(chunk))
@@ -304,7 +304,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	gabunganTeksRelevan := bestChunk1 + "\n\n" + bestChunk2
 
 	// 5. Generative AI hanya merespon teks yang relevan
-	model := client.GenerativeModel("gemini-2.5-flash")
+	model := client.GenerativeModel("gemini-1.5-flash")
 
 	prompt := fmt.Sprintf(`
 		Anda adalah Reviewer Akademik Profesional. Berdasarkan cuplikan dokumen proposal paling relevan berikut ini, tolong berikan review dan evaluasi singkat namun tajam.

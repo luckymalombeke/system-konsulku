@@ -20,6 +20,7 @@ import (
 
 type AIService struct {
 	ApiKey       string
+	ChatApiKey   string
 	GeminiApiKey string
 	Model        string
 }
@@ -58,12 +59,20 @@ func cosineSimilarity(a, b []float32) float32 {
 
 func NewAIService() *AIService {
 	apiKey := os.Getenv("GROQ_API_KEY")
+	chatKey := os.Getenv("GROQ_API_KEY_CHAT")
 	geminiKey := os.Getenv("GEMINI_API_KEY")
+
 	if apiKey == "" {
 		fmt.Println("[AI Service] ❌ Warning: GROQ_API_KEY tidak ada.")
 	}
+	// Fallback jika chatKey tidak ada, gunakan apiKey biasa
+	if chatKey == "" {
+		chatKey = apiKey
+	}
+
 	return &AIService{
 		ApiKey:       apiKey,
+		ChatApiKey:   chatKey,
 		GeminiApiKey: geminiKey,
 		Model:        "llama-3.3-70b-versatile",
 	}
@@ -151,13 +160,19 @@ type GroqResponse struct {
 	} `json:"error"`
 }
 
-func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelName string) (*GroqResponse, error) {
+func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelName string, specificApiKey string) (*GroqResponse, error) {
 	url := "https://api.groq.com/openai/v1/chat/completions"
 
 	// Jika modelName kosong, gunakan default dari service
 	selectedModel := modelName
 	if selectedModel == "" {
 		selectedModel = s.Model
+	}
+
+	// Gunakan API Key yang spesifik jika diberikan, jika tidak pakai s.ApiKey
+	finalApiKey := specificApiKey
+	if finalApiKey == "" {
+		finalApiKey = s.ApiKey
 	}
 
 	payload := map[string]interface{}{
@@ -172,7 +187,7 @@ func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelNam
 	jsonData, _ := json.Marshal(payload)
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+s.ApiKey)
+	req.Header.Set("Authorization", "Bearer "+finalApiKey)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -210,8 +225,8 @@ func (s *AIService) GetConsultationAdvice(topic string, problem string) (string,
 		{Role: "user", Content: prompt},
 	}
 
-	// Gunakan model 8b untuk saran cepat
-	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant")
+	// Gunakan model 8b untuk saran cepat dengan Chat Key
+	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
 	if err != nil {
 		return s.generateSmartFallback(topic, problem), nil
 	}
@@ -253,8 +268,8 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 		{Role: "user", Content: userMessage},
 	}
 
-	// Gunakan model 8b untuk asisten umum (lebih hemat & cepat)
-	resp, err := s.callGroq(messages, tools, "llama-3.1-8b-instant")
+	// Gunakan model 8b untuk asisten umum (lebih hemat & cepat) dengan Chat Key
+	resp, err := s.callGroq(messages, tools, "llama-3.1-8b-instant", s.ChatApiKey)
 	if err != nil {
 		return "Gagal di panggilan pertama: " + err.Error(), nil
 	}
@@ -285,7 +300,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 					Content:    dbResult,
 				})
 
-				resp2, err := s.callGroq(messages, nil, "llama-3.1-8b-instant")
+				resp2, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
 				if err != nil {
 					return "Gagal merangkum jawaban: " + err.Error(), nil
 				}
@@ -408,8 +423,8 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		{Role: "user", Content: prompt},
 	}
 
-	// PAKAI MODEL 8B UNTUK CHAT INTERAKTIF (CEPAT & LIMIT TINGGI)
-	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant")
+	// PAKAI MODEL 8B UNTUK CHAT INTERAKTIF (CEPAT & LIMIT TINGGI) dengan Chat Key
+	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
 	if err != nil {
 		return "Gagal mendapatkan respon dari AI: " + err.Error(), nil
 	}

@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,9 +12,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
 )
 
 type AIService struct {

@@ -258,7 +258,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	defer client.Close()
 
 	// Gunakan model Gemini 1.5 Flash yang punya context window besar
-	model := client.GenerativeModel("gemini-1.5-flash-latest")
+	model := client.GenerativeModel("gemini-1.5-flash")
 
 	// Gunakan Regex untuk membuang semua karakter selain huruf, angka, tanda baca standar, dan spasi
 	// Ini adalah cara paling aman untuk menghindari error "invalid UTF-8" di sistem Google

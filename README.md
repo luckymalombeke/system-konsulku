@@ -3,6 +3,15 @@
 # 🎓 KonsulKu
 ### *Elevating Academic Consultation with AI Intelligence*
 
+---
+
+## 🚀 Live Links
+- **🌐 Live Web App**: [https://system-konsulku.vercel.app](https://system-konsulku.vercel.app)
+- **⚙️ API Backend**: [https://konsulku-production.up.railway.app](https://konsulku-production.up.railway.app)
+- **🗄️ Database**: Supabase PostgreSQL Cloud
+
+---
+
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://golang.org/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
 [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)

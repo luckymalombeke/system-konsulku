@@ -4,7 +4,7 @@ import { Layout } from '../../components/Layout';
 import { StatusBadge } from '../../components/StatusBadge';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
 import { ChevronLeft, Clock, Calendar, Tag, Paperclip, Check } from 'lucide-react';
-import { getAppointmentByID } from '../../api';
+import { getAppointmentByID, API_BASE_URL } from '../../api';
 
 export default function DetailAppointment() {
   const { id } = useParams();
@@ -127,7 +127,7 @@ export default function DetailAppointment() {
             <div className="text-xs font-semibold text-gray-500 uppercase mb-2">Lampiran</div>
             {detailData.lampiran ? (
               <a 
-                href={`http://localhost:8081${detailData.lampiran}`} 
+                href={`${API_BASE_URL}${detailData.lampiran}`} 
                 target="_blank" 
                 rel="noreferrer"
                 className="flex items-center gap-3 border border-[#4A1D8F]/20 bg-[#F0E9FF]/50 hover:bg-[#F0E9FF] rounded-lg p-3 w-fit cursor-pointer transition-colors"

@@ -258,7 +258,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	defer client.Close()
 
 	// Gunakan model Gemini 1.5 Flash yang punya context window besar
-	model := client.GenerativeModel("gemini-1.5-flash")
+	model := client.GenerativeModel("gemini-1.5-flash-latest")
 
 	// Kita batasi teksnya sedikit agar tidak terlalu panjang (opsional)
 	// Dan pastikan teks adalah valid UTF-8 untuk menghindari error proto

@@ -244,6 +244,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
+// AnalyzeProposal menangani evaluasi dokumen proposal (Triggering redeploy with latest SDK)
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
 	geminiKey := os.Getenv("GEMINI_API_KEY")
 	if geminiKey == "" {

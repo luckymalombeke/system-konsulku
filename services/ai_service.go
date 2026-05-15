@@ -313,11 +313,11 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
-	// Batasi teks agar tidak melebihi kuota token Groq.
-	// Llama 3.3-70b-versatile mendukung hingga 128k context window (~500k karakter).
-	// Kita set ke 150k karakter (~35k-40k token) agar tetap aman dan tidak terlalu lemot.
-	if len(safeContent) > 150000 {
-		safeContent = safeContent[:150000] + "... (teks dipotong karena sangat panjang, hubungi admin untuk batas lebih besar)"
+	// Batasi teks agar tidak melebihi kuota TPM (Tokens Per Minute) Groq.
+	// Karena akun Anda memiliki limit 12.000 TPM, kita set ke 35.000 karakter (~9.000 token)
+	// agar aman dan tidak terkena error "Request too large".
+	if len(safeContent) > 35000 {
+		safeContent = safeContent[:35000] + "... (teks dipotong agar tidak melebihi kuota API Groq)"
 	}
 
 	prompt := fmt.Sprintf(`

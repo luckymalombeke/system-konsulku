@@ -246,7 +246,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
 	geminiKey := os.Getenv("GEMINI_API_KEY")
 	if geminiKey == "" {
-		return "API Key Gemini belum di-set di file .env", nil
+		return "API Key Gemini belum di-set di file .env / Railway", nil
 	}
 
 	ctx := context.Background()
@@ -256,62 +256,30 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	}
 	defer client.Close()
 
-	// RAG IMPLEMENTATION: Chunking & Embeddings
-	// 1. Memotong isi dokumen jadi per 150 kata (lebih hemat token)
-	chunks := chunkText(fileContent, 150)
-
-	// 2. Mengubah teks menjadi Vector (Embeddings)
-	em := client.EmbeddingModel("embedding-001")
-	var chunkVectors [][]float32
-	for _, chunk := range chunks {
-		res, err := em.EmbedContent(ctx, genai.Text(chunk))
-		if err != nil {
-			// Jika gagal embed, fallback ke chunk pertama aja biar ga error
-			break
-		}
-		chunkVectors = append(chunkVectors, res.Embedding.Values)
-	}
-
-	// 3. Pertanyaan Inti (Query) yang ingin dicari di dokumen
-	query := "Tolong evaluasi latar belakang, perumusan masalah, dan metode penelitian secara mendalam."
-	resTanya, err := em.EmbedContent(ctx, genai.Text(query))
-	if err != nil {
-		return "Gagal membuat embedding pertanyaan: " + err.Error(), nil
-	}
-	vektorPertanyaan := resTanya.Embedding.Values
-
-	// 4. Semantic Search: Ambil 2 chunk paling relevan untuk di-review
-	bestScore1, bestScore2 := float32(-1.0), float32(-1.0)
-	bestChunk1, bestChunk2 := "", ""
-
-	if len(chunkVectors) > 0 {
-		for i, chunkVec := range chunkVectors {
-			score := cosineSimilarity(vektorPertanyaan, chunkVec)
-			if score > bestScore1 {
-				bestScore2 = bestScore1
-				bestChunk2 = bestChunk1
-				bestScore1 = score
-				bestChunk1 = chunks[i]
-			} else if score > bestScore2 {
-				bestScore2 = score
-				bestChunk2 = chunks[i]
-			}
-		}
-	} else {
-		bestChunk1 = fileContent // Fallback jika teks sangat pendek
-	}
-
-	gabunganTeksRelevan := bestChunk1 + "\n\n" + bestChunk2
-
-	// 5. Generative AI hanya merespon teks yang relevan
+	// Gunakan model Gemini 1.5 Flash yang punya context window besar
 	model := client.GenerativeModel("gemini-1.5-flash")
 
+	// Kita batasi teksnya sedikit agar tidak terlalu panjang (opsional)
+	// 50.000 karakter sudah sangat cukup untuk sebuah proposal
+	safeContent := fileContent
+	if len(safeContent) > 50000 {
+		safeContent = safeContent[:50000] + "... (teks dipotong karena terlalu panjang)"
+	}
+
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik Profesional. Berdasarkan cuplikan dokumen proposal paling relevan berikut ini, tolong berikan review dan evaluasi singkat namun tajam.
+		Anda adalah Reviewer Akademik Profesional. Tolong berikan review, evaluasi, dan saran perbaikan yang tajam untuk proposal mahasiswa berikut ini:
 		Nama File: %s
-		--- CUPLIKAN DOKUMEN ---
+		
+		--- ISI PROPOSAL ---
 		%s
-	`, fileName, gabunganTeksRelevan)
+		--- AKHIR PROPOSAL ---
+		
+		Berikan review dalam Bahasa Indonesia yang mencakup:
+		1. Evaluasi Latar Belakang & Urgensi
+		2. Evaluasi Rumusan Masalah
+		3. Evaluasi Metode Penelitian
+		4. Saran Perbaikan Spesifik
+	`, fileName, safeContent)
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
@@ -328,7 +296,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 		return output, nil
 	}
 
-	return "Analisis gagal.", nil
+	return "Analisis gagal, AI tidak memberikan jawaban.", nil
 }
 
 func getLecturerInfoFromDB(name string) string {

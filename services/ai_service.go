@@ -151,11 +151,17 @@ type GroqResponse struct {
 	} `json:"error"`
 }
 
-func (s *AIService) callGroq(messages []GroqMessage, tools interface{}) (*GroqResponse, error) {
+func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelName string) (*GroqResponse, error) {
 	url := "https://api.groq.com/openai/v1/chat/completions"
 
+	// Jika modelName kosong, gunakan default dari service
+	selectedModel := modelName
+	if selectedModel == "" {
+		selectedModel = s.Model
+	}
+
 	payload := map[string]interface{}{
-		"model":    s.Model,
+		"model":    selectedModel,
 		"messages": messages,
 	}
 	if tools != nil {
@@ -204,7 +210,8 @@ func (s *AIService) GetConsultationAdvice(topic string, problem string) (string,
 		{Role: "user", Content: prompt},
 	}
 
-	resp, err := s.callGroq(messages, nil)
+	// Gunakan model 8b untuk saran cepat
+	resp, err := s.callGroq(messages, nil, "llama3-8b-8192")
 	if err != nil {
 		return s.generateSmartFallback(topic, problem), nil
 	}
@@ -246,7 +253,8 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 		{Role: "user", Content: userMessage},
 	}
 
-	resp, err := s.callGroq(messages, tools)
+	// Gunakan model 8b untuk asisten umum (lebih hemat & cepat)
+	resp, err := s.callGroq(messages, tools, "llama3-8b-8192")
 	if err != nil {
 		return "Gagal di panggilan pertama: " + err.Error(), nil
 	}
@@ -265,22 +273,19 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 
 				dbResult := getLecturerInfoFromDB(args.LecturerName)
 
-				// Tambahkan pesan asisten (yang berisi instruksi panggil fungsi) ke history
 				messages = append(messages, GroqMessage{
 					Role:      "assistant",
 					Content:   assistantMsg.Content,
 					ToolCalls: assistantMsg.ToolCalls,
 				})
 				
-				// Tambahkan hasil tool (jawaban dari database) ke history
 				messages = append(messages, GroqMessage{
 					Role:       "tool",
 					ToolCallID: toolCall.ID,
 					Content:    dbResult,
 				})
 
-				// Panggil lagi untuk merangkum (KALI INI TANPA TOOLS agar AI fokus bicara)
-				resp2, err := s.callGroq(messages, nil)
+				resp2, err := s.callGroq(messages, nil, "llama3-8b-8192")
 				if err != nil {
 					return "Gagal merangkum jawaban: " + err.Error(), nil
 				}
@@ -303,19 +308,17 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
-// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Groq Llama 3
+// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Groq Llama 3.3-70B
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
 	if s.ApiKey == "" {
 		return "API Key Groq belum di-set di file .env / Railway", nil
 	}
 
-	// Gunakan Regex untuk membuang semua karakter selain huruf, angka, tanda baca standar, dan spasi
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
 	// Batasi teks agar tidak melebihi kuota TPM (Tokens Per Minute) Groq.
 	// Karena akun Anda memiliki limit 12.000 TPM, kita set ke 35.000 karakter (~9.000 token)
-	// agar aman dan tidak terkena error "Request too large".
 	if len(safeContent) > 35000 {
 		safeContent = safeContent[:35000] + "... (teks dipotong agar tidak melebihi kuota API Groq)"
 	}
@@ -340,7 +343,8 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 		{Role: "user", Content: prompt},
 	}
 
-	resp, err := s.callGroq(messages, nil)
+	// PAKAI MODEL 70B UNTUK ANALISIS MENDALAM
+	resp, err := s.callGroq(messages, nil, "llama-3.3-70b-versatile")
 	if err != nil {
 		return "Gagal menganalisis dokumen dengan Groq: " + err.Error(), nil
 	}
@@ -358,17 +362,14 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		return "API Key belum siap.", nil
 	}
 
-	// 1. Ambil konteks relevan menggunakan RAG (Embedding + Cosine Similarity)
-	// Jika gagal atau teks pendek, kita gunakan fullText sebagai fallback
 	contextText, err := s.GetRelevantContext(question, fullText)
 	if err != nil || contextText == "" {
 		contextText = fullText
-		if len(contextText) > 35000 {
-			contextText = contextText[:35000]
+		if len(contextText) > 8000 {
+			contextText = contextText[:8000]
 		}
 	}
 
-	// 2. Susun Prompt yang terarah (Targeted Prompt)
 	prompt := fmt.Sprintf(`
 		Anda adalah Reviewer Akademik Profesional KonsulKu. 
 		Anda sedang berdiskusi dengan mahasiswa tentang proposalnya yang berjudul: "%s".
@@ -380,8 +381,7 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		
 		PERTANYAAN MAHASISWA: "%s"
 		
-		Berikan jawaban yang spesifik, bernada akademis, namun tetap suportif berdasarkan potongan dokumen di atas. 
-		Jika informasi tidak ditemukan di dokumen tersebut, sampaikan dengan sopan namun tetap berikan saran umum yang relevan untuk penelitian tersebut.
+		Berikan jawaban yang spesifik, bernada akademis, namun tetap suportif berdasarkan potongan dokumen di atas.
 	`, fileName, contextText, question)
 
 	messages := []GroqMessage{
@@ -389,8 +389,8 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		{Role: "user", Content: prompt},
 	}
 
-	// 3. Panggil Groq untuk mendapatkan respon
-	resp, err := s.callGroq(messages, nil)
+	// PAKAI MODEL 8B UNTUK CHAT INTERAKTIF (CEPAT & LIMIT TINGGI)
+	resp, err := s.callGroq(messages, nil, "llama3-8b-8192")
 	if err != nil {
 		return "Gagal mendapatkan respon dari AI: " + err.Error(), nil
 	}

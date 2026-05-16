@@ -72,8 +72,13 @@ func (s *AIService) GetRelevantContext(query string, fullText string) (string, e
 		score := 0
 		lowerChunk := strings.ToLower(chunk)
 		for _, word := range queryWords {
-			if len(word) > 3 && strings.Contains(lowerChunk, word) {
-				score++
+			// Perbolehkan kata minimal 3 karakter (seperti "Bab")
+			if len(word) >= 3 && strings.Contains(lowerChunk, word) {
+				score += 2
+			}
+			// Berikan skor tambahan untuk angka yang cocok (seperti "3" pada "Bab 3")
+			if regexp.MustCompile(`\d+`).MatchString(word) && strings.Contains(lowerChunk, word) {
+				score += 3
 			}
 		}
 		if score > bestScore {

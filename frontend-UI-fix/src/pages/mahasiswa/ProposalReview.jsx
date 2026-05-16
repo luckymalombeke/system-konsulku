@@ -90,6 +90,61 @@ export default function ProposalReview() {
     }
   };
 
+  const handleExport = () => {
+    if (!result) return;
+
+    const printWindow = window.open('', '_blank');
+    const date = new Date().toLocaleDateString('id-ID', { 
+      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+
+    const content = `
+      <html>
+        <head>
+          <title>Laporan Review AI - ${file?.name}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+            .header { text-align: center; border-bottom: 2px solid #4A1D8F; padding-bottom: 20px; margin-bottom: 30px; }
+            .header h1 { color: #4A1D8F; margin: 0; font-size: 24px; }
+            .meta { font-size: 12px; color: #666; margin-top: 10px; }
+            .section { margin-bottom: 25px; }
+            h3 { color: #4A1D8F; border-left: 4px solid #4A1D8F; padding-left: 10px; margin-top: 30px; }
+            p, div, li { font-size: 14px; text-align: justify; }
+            .footer { margin-top: 50px; font-size: 10px; text-align: center; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+            @media print {
+              .no-print { display: none; }
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>LAPORAN ANALISIS AKADEMIK AI</h1>
+            <div class="meta">
+              Aplikasi KonsulKu • Dokumen: ${file?.name} • Tanggal: ${date}
+            </div>
+          </div>
+          <div class="content">
+            ${result.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
+          </div>
+          <div class="footer">
+            Laporan ini dihasilkan secara otomatis oleh KonsulKu AI (Groq Llama 3.3 Engine).<br/>
+            Gunakan laporan ini sebagai panduan revisi akademik.
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              // window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+  };
+
   const formatAIResponse = (text) => {
     return text.split('\n').map((line, i) => {
       const formatBold = (t) => ({ __html: t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') });
@@ -245,12 +300,21 @@ export default function ProposalReview() {
                       <CheckCircle className="text-green-500" size={20} />
                       Review Utama AI
                     </h3>
-                    <button 
-                      onClick={() => {setResult(null); setFile(null); setChatMessages([]);}}
-                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      Reset
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={handleExport}
+                        className="text-xs flex items-center gap-1.5 bg-[#F0E9FF] text-[#4A1D8F] px-3 py-1.5 rounded-lg font-semibold hover:bg-[#4A1D8F] hover:text-white transition-all"
+                      >
+                        <FileText size={14} />
+                        Cetak Laporan
+                      </button>
+                      <button 
+                        onClick={() => {setResult(null); setFile(null); setChatMessages([]);}}
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
 
                   <div className="prose prose-sm max-w-none">

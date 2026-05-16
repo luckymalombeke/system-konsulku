@@ -401,6 +401,3 @@ func getLecturerInfoFromDB(name string) string {
 	return fmt.Sprintf("Dosen: %s %s. Prodi: %s. Status: %s. Jadwal: %s.", 
 		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Prodi, status, dosen.CatatanJadwal)
 }
- {
-	return &s
-}

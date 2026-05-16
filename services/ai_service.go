@@ -57,37 +57,57 @@ func NewAIService() *AIService {
 	}
 }
 
-// GetRelevantContext mencari potongan teks paling relevan menggunakan Keyword Matching (Pengganti Gemini Embedding)
-func (s *AIService) GetRelevantContext(query string, fullText string) (string, error) {
+// GetRelevantContext mencari beberapa potongan teks paling relevan menggunakan Keyword Matching (Multi-Context)
+func (s *AIService) GetRelevantContext(query string, fullText string) ([]string, error) {
 	chunks := chunkText(fullText, 300)
 	if len(chunks) == 0 {
-		return "", nil
+		return nil, nil
 	}
 
+	type ScoredChunk struct {
+		Chunk string
+		Score int
+	}
+	var scoredChunks []ScoredChunk
+
 	queryWords := strings.Fields(strings.ToLower(query))
-	bestScore := 0
-	bestChunk := chunks[0]
 
 	for _, chunk := range chunks {
 		score := 0
 		lowerChunk := strings.ToLower(chunk)
 		for _, word := range queryWords {
-			// Perbolehkan kata minimal 3 karakter (seperti "Bab")
 			if len(word) >= 3 && strings.Contains(lowerChunk, word) {
 				score += 2
 			}
-			// Berikan skor tambahan untuk angka yang cocok (seperti "3" pada "Bab 3")
 			if regexp.MustCompile(`\d+`).MatchString(word) && strings.Contains(lowerChunk, word) {
 				score += 3
 			}
 		}
-		if score > bestScore {
-			bestScore = score
-			bestChunk = chunk
+		if score > 0 {
+			scoredChunks = append(scoredChunks, ScoredChunk{Chunk: chunk, Score: score})
 		}
 	}
 
-	return bestChunk, nil
+	// Urutkan berdasarkan skor tertinggi
+	for i := 0; i < len(scoredChunks); i++ {
+		for j := i + 1; j < len(scoredChunks); j++ {
+			if scoredChunks[i].Score < scoredChunks[j].Score {
+				scoredChunks[i], scoredChunks[j] = scoredChunks[j], scoredChunks[i]
+			}
+		}
+	}
+
+	// Ambil top 3
+	var result []string
+	limit := 3
+	if len(scoredChunks) < limit {
+		limit = len(scoredChunks)
+	}
+	for i := 0; i < limit; i++ {
+		result = append(result, scoredChunks[i].Chunk)
+	}
+
+	return result, nil
 }
 
 // Groq Structures
@@ -335,22 +355,26 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		return "API Key belum siap.", nil
 	}
 
-	contextText, err := s.GetRelevantContext(question, fullText)
-	if err != nil || contextText == "" {
+	relevantChunks, err := s.GetRelevantContext(question, fullText)
+	var contextText string
+
+	if err != nil || len(relevantChunks) == 0 {
+		// Fallback jika pencarian gagal, ambil 10rb karakter pertama
 		contextText = fullText
 		if len(contextText) > 10000 {
 			contextText = contextText[:10000]
 		}
+	} else {
+		// Gabungkan top 3 chunk dengan pemisah yang jelas
+		contextText = strings.Join(relevantChunks, "\n---\n")
 	}
 
 	prompt := fmt.Sprintf(`
 		Anda adalah Reviewer Akademik Profesional KonsulKu. 
 		Anda sedang berdiskusi dengan mahasiswa tentang proposalnya yang berjudul: "%s".
 		
-		BERIKUT ADALAH POTONGAN KONTEKS DOKUMEN YANG RELEVAN:
-		---
+		BERIKUT ADALAH BEBERAPA POTONGAN KONTEKS DOKUMEN YANG RELEVAN:
 		%s
-		---
 		
 		PERTANYAAN MAHASISWA: "%s"
 		

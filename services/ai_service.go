@@ -7,23 +7,18 @@ import (
 	"io"
 	"konsulku/config"
 	"konsulku/models"
-	"math"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
-
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
-	"context"
 )
 
 type AIService struct {
-	ApiKey       string
-	ChatApiKey   string
-	GeminiApiKey string
-	Model        string
+	ApiKey     string
+	ChatApiKey string
+	Model      string
 }
+
 // Fungsi untuk memotong teks panjang (Chunking)
 func chunkText(text string, chunkSize int) []string {
 	words := strings.Fields(text)
@@ -43,24 +38,9 @@ func chunkText(text string, chunkSize int) []string {
 	return chunks
 }
 
-// Fungsi menghitung kedekatan makna (Cosine Similarity)
-func cosineSimilarity(a, b []float32) float32 {
-	var dotProduct, normA, normB float32
-	for i := range a {
-		dotProduct += a[i] * b[i]
-		normA += a[i] * a[i]
-		normB += b[i] * b[i]
-	}
-	if normA == 0 || normB == 0 {
-		return 0
-	}
-	return float32(float64(dotProduct) / (math.Sqrt(float64(normA)) * math.Sqrt(float64(normB))))
-}
-
 func NewAIService() *AIService {
 	apiKey := os.Getenv("GROQ_API_KEY")
 	chatKey := os.Getenv("GROQ_API_KEY_CHAT")
-	geminiKey := os.Getenv("GEMINI_API_KEY")
 
 	if apiKey == "" {
 		fmt.Println("[AI Service] ❌ Warning: GROQ_API_KEY tidak ada.")
@@ -71,60 +51,31 @@ func NewAIService() *AIService {
 	}
 
 	return &AIService{
-		ApiKey:       apiKey,
-		ChatApiKey:   chatKey,
-		GeminiApiKey: geminiKey,
-		Model:        "llama-3.3-70b-versatile",
+		ApiKey:     apiKey,
+		ChatApiKey: chatKey,
+		Model:      "llama-3.3-70b-versatile",
 	}
 }
 
-// GetEmbedding mengubah teks menjadi vector menggunakan Google Gemini Embedding
-func (s *AIService) GetEmbedding(text string) ([]float32, error) {
-	if s.GeminiApiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY belum di-set")
-	}
-
-	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(s.GeminiApiKey))
-	if err != nil {
-		return nil, err
-	}
-	defer client.Close()
-
-	em := client.EmbeddingModel("text-embedding-004")
-	res, err := em.EmbedContent(ctx, genai.Text(text))
-	if err != nil {
-		return nil, err
-	}
-
-	return res.Embedding.Values, nil
-}
-
-// GetRelevantContext mencari potongan teks paling relevan dari sebuah dokumen (RAG)
+// GetRelevantContext mencari potongan teks paling relevan menggunakan Keyword Matching (Pengganti Gemini Embedding)
 func (s *AIService) GetRelevantContext(query string, fullText string) (string, error) {
-	// 1. Chunking dokumen (potong per 300 kata agar konteks tetap terjaga)
 	chunks := chunkText(fullText, 300)
 	if len(chunks) == 0 {
 		return "", nil
 	}
 
-	// 2. Dapatkan Embedding untuk Query (Pertanyaan)
-	queryVec, err := s.GetEmbedding(query)
-	if err != nil {
-		return "", err
-	}
-
-	// 3. Loop untuk mencari chunk paling relevan (Semantic Search)
-	bestScore := float32(-1.0)
-	bestChunk := ""
+	queryWords := strings.Fields(strings.ToLower(query))
+	bestScore := 0
+	bestChunk := chunks[0]
 
 	for _, chunk := range chunks {
-		chunkVec, err := s.GetEmbedding(chunk)
-		if err != nil {
-			continue // Skip jika gagal
+		score := 0
+		lowerChunk := strings.ToLower(chunk)
+		for _, word := range queryWords {
+			if len(word) > 3 && strings.Contains(lowerChunk, word) {
+				score++
+			}
 		}
-
-		score := cosineSimilarity(queryVec, chunkVec)
 		if score > bestScore {
 			bestScore = score
 			bestChunk = chunk
@@ -134,7 +85,7 @@ func (s *AIService) GetRelevantContext(query string, fullText string) (string, e
 	return bestChunk, nil
 }
 
-// Groq Structures - Updated for better compatibility
+// Groq Structures
 type GroqMessage struct {
 	Role       string          `json:"role"`
 	Content    string          `json:"content"`
@@ -163,13 +114,11 @@ type GroqResponse struct {
 func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelName string, specificApiKey string) (*GroqResponse, error) {
 	url := "https://api.groq.com/openai/v1/chat/completions"
 
-	// Jika modelName kosong, gunakan default dari service
 	selectedModel := modelName
 	if selectedModel == "" {
 		selectedModel = s.Model
 	}
 
-	// Gunakan API Key yang spesifik jika diberikan, jika tidak pakai s.ApiKey
 	finalApiKey := specificApiKey
 	if finalApiKey == "" {
 		finalApiKey = s.ApiKey
@@ -211,7 +160,7 @@ func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelNam
 
 func (s *AIService) GetConsultationAdvice(topic string, problem string) (string, error) {
 	if s.ApiKey == "" {
-		return s.generateSmartFallback(topic, problem), nil
+		return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan.", nil
 	}
 
 	prompt := fmt.Sprintf(`
@@ -225,17 +174,16 @@ func (s *AIService) GetConsultationAdvice(topic string, problem string) (string,
 		{Role: "user", Content: prompt},
 	}
 
-	// Gunakan model 8b untuk saran cepat dengan Chat Key
 	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
 	if err != nil {
-		return s.generateSmartFallback(topic, problem), nil
+		return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan.", nil
 	}
 
 	if len(resp.Choices) > 0 {
 		return resp.Choices[0].Message.Content, nil
 	}
 
-	return s.generateSmartFallback(topic, problem), nil
+	return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan.", nil
 }
 
 func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
@@ -268,7 +216,6 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 		{Role: "user", Content: userMessage},
 	}
 
-	// Gunakan model 8b untuk asisten umum (lebih hemat & cepat) dengan Chat Key
 	resp, err := s.callGroq(messages, tools, "llama-3.1-8b-instant", s.ChatApiKey)
 	if err != nil {
 		return "Gagal di panggilan pertama: " + err.Error(), nil
@@ -323,19 +270,18 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
-// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Google Gemini 1.5 Flash (Kapasitas Besar)
+// AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Groq Llama 3.3 70B (Pengganti Gemini)
 func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
-	if s.GeminiApiKey == "" {
-		return "GEMINI_API_KEY belum di-set di file .env", nil
+	if s.ApiKey == "" {
+		return "GROQ_API_KEY belum di-set di file .env", nil
 	}
 
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
-	// Gemini 1.5 Flash punya limit 1 Juta Token. 
-	// Kita set batas ke 1.000.000 karakter (sangat cukup untuk skripsi tebal)
-	if len(safeContent) > 1000000 {
-		safeContent = safeContent[:1000000] + "... (teks sangat panjang dipotong pada 1 juta karakter)"
+	// Groq Llama 3.3 70B memiliki context window besar, tapi kita batasi karakter agar aman di rate limit
+	if len(safeContent) > 30000 {
+		safeContent = safeContent[:30000] + "... (teks dipotong agar sesuai kapasitas Groq)"
 	}
 
 	prompt := fmt.Sprintf(`
@@ -361,33 +307,21 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 		Berikan langkah konkret yang harus dilakukan mahasiswa agar proposal ini layak diajukan ke sidang.
 	`, fileName, safeContent)
 
-	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(s.GeminiApiKey))
+	messages := []GroqMessage{
+		{Role: "user", Content: prompt},
+	}
+
+	// Gunakan model 70B untuk analisis mendalam
+	resp, err := s.callGroq(messages, nil, "llama-3.3-70b-versatile", s.ApiKey)
 	if err != nil {
-		return "", fmt.Errorf("gagal inisialisasi Gemini: %v", err)
-	}
-	defer client.Close()
-
-	// Gunakan alias 'gemini-flash-latest' agar otomatis memilih versi stabil yang masuk jatah gratis
-	model := client.GenerativeModel("gemini-flash-latest")
-	
-	// Set temperature rendah agar analisis tetap fokus dan akademis
-	model.SetTemperature(0.3)
-
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-	if err != nil {
-		return "", fmt.Errorf("error Gemini: %v", err)
+		return "Gagal menganalisis proposal via Groq: " + err.Error(), nil
 	}
 
-	if len(resp.Candidates) > 0 && resp.Candidates[0].Content != nil {
-		var fullResponse strings.Builder
-		for _, part := range resp.Candidates[0].Content.Parts {
-			fullResponse.WriteString(fmt.Sprintf("%v", part))
-		}
-		return fullResponse.String(), nil
+	if len(resp.Choices) > 0 {
+		return resp.Choices[0].Message.Content, nil
 	}
 
-	return "Analisis gagal, Gemini tidak memberikan jawaban.", nil
+	return "Analisis gagal, Groq tidak memberikan jawaban.", nil
 }
 
 // ChatWithProposal menangani tanya jawab interaktif berbasis isi dokumen (RAG)
@@ -399,8 +333,8 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 	contextText, err := s.GetRelevantContext(question, fullText)
 	if err != nil || contextText == "" {
 		contextText = fullText
-		if len(contextText) > 8000 {
-			contextText = contextText[:8000]
+		if len(contextText) > 10000 {
+			contextText = contextText[:10000]
 		}
 	}
 
@@ -423,7 +357,6 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		{Role: "user", Content: prompt},
 	}
 
-	// PAKAI MODEL 8B UNTUK CHAT INTERAKTIF (CEPAT & LIMIT TINGGI) dengan Chat Key
 	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
 	if err != nil {
 		return "Gagal mendapatkan respon dari AI: " + err.Error(), nil
@@ -446,12 +379,9 @@ func getLecturerInfoFromDB(name string) string {
 	}
 
 	var dosen models.Dosen
-	// Gunakan Find().Limit(1) agar tidak muncul error 'record not found' berwarna merah di terminal jika tidak ketemu
 	result := config.DB.Where("LOWER(nama_lengkap) LIKE LOWER(?)", "%"+cleanName+"%").Limit(1).Find(&dosen)
 	
-	// Cek apakah ada data yang ditemukan (RowsAffected > 0)
 	if result.RowsAffected == 0 {
-		// Jika tidak ditemukan, coba ambil 3 nama dosen yang ada sebagai referensi
 		var allDosen []models.Dosen
 		config.DB.Select("nama_lengkap").Limit(3).Find(&allDosen)
 		
@@ -471,12 +401,6 @@ func getLecturerInfoFromDB(name string) string {
 	return fmt.Sprintf("Dosen: %s %s. Prodi: %s. Status: %s. Jadwal: %s.", 
 		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Prodi, status, dosen.CatatanJadwal)
 }
-
-func (s *AIService) generateSmartFallback(topic, problem string) string {
-	return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan."
-}
-
-// Helper function
-func stringPtr(s string) *string {
+ {
 	return &s
 }

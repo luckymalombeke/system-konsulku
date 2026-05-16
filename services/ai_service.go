@@ -124,10 +124,10 @@ func (s *AIService) GetRelevantContext(query string, fullText string) ([]string,
 
 // Groq Structures
 type GroqMessage struct {
-	Role       string          `json:"role"`
-	Content    string          `json:"content"`
-	ToolCalls  []GroqToolCall  `json:"tool_calls,omitempty"`
-	ToolCallID string          `json:"tool_call_id,omitempty"`
+	Role       string         `json:"role"`
+	Content    string         `json:"content"`
+	ToolCalls  []GroqToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string         `json:"tool_call_id,omitempty"`
 }
 
 type GroqToolCall struct {
@@ -260,10 +260,10 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 
 	if len(resp.Choices) > 0 {
 		assistantMsg := resp.Choices[0].Message
-		
+
 		if len(assistantMsg.ToolCalls) > 0 {
 			toolCall := assistantMsg.ToolCalls[0]
-			
+
 			if toolCall.Function.Name == "get_lecturer_schedule" {
 				var args struct {
 					LecturerName string `json:"lecturer_name"`
@@ -277,7 +277,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 					Content:   assistantMsg.Content,
 					ToolCalls: assistantMsg.ToolCalls,
 				})
-				
+
 				messages = append(messages, GroqMessage{
 					Role:       "tool",
 					ToolCallID: toolCall.ID,
@@ -288,7 +288,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 				if err != nil {
 					return "Gagal merangkum jawaban: " + err.Error(), nil
 				}
-				
+
 				if len(resp2.Choices) > 0 {
 					content := resp2.Choices[0].Message.Content
 					if content != "" {
@@ -298,7 +298,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 				return "Saya sudah menemukan datanya, tapi gagal merangkumnya. Silakan tanya lagi.", nil
 			}
 		}
-		
+
 		if assistantMsg.Content != "" {
 			return assistantMsg.Content, nil
 		}
@@ -445,16 +445,16 @@ func getLecturerInfoFromDB(name string) string {
 
 	var dosen models.Dosen
 	result := config.DB.Where("LOWER(nama_lengkap) LIKE LOWER(?)", "%"+cleanName+"%").Limit(1).Find(&dosen)
-	
+
 	if result.RowsAffected == 0 {
 		var allDosen []models.Dosen
 		config.DB.Select("nama_lengkap").Limit(3).Find(&allDosen)
-		
+
 		names := []string{}
 		for _, d := range allDosen {
 			names = append(names, d.NamaLengkap)
 		}
-		
+
 		return fmt.Sprintf("Dosen '%s' tidak ditemukan. Dosen yang tersedia di database antara lain: %s. Pastikan ejaan nama benar.", cleanName, strings.Join(names, ", "))
 	}
 
@@ -463,6 +463,6 @@ func getLecturerInfoFromDB(name string) string {
 		status = "Tidak Tersedia"
 	}
 
-	return fmt.Sprintf("Dosen: %s %s. Prodi: %s. Status: %s. Jadwal: %s.", 
+	return fmt.Sprintf("Dosen: %s %s. Prodi: %s. Status: %s. Jadwal: %s.",
 		dosen.NamaLengkap, dosen.GelarBelakang, dosen.Prodi, status, dosen.CatatanJadwal)
 }

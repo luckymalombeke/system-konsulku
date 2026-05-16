@@ -295,8 +295,44 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 	return "Maaf, AI tidak memberikan respon (Empty Choices).", nil
 }
 
+// GetLecturerChatContext mengambil riwayat chat terakhir antara mahasiswa dan dosen
+func (s *AIService) GetLecturerChatContext(userID uint) string {
+	var mhs models.Mahasiswa
+	if err := config.DB.Where("user_id = ?", userID).First(&mhs).Error; err != nil {
+		return ""
+	}
+
+	var chat models.KonsultasiChat
+	// Ambil chat terakhir mahasiswa ini
+	if err := config.DB.Where("mahasiswa_id = ?", mhs.ID).Order("dibuat_pada DESC").First(&chat).Error; err != nil {
+		return ""
+	}
+
+	var pesan []models.Pesan
+	// Ambil 15 pesan terakhir agar AI punya konteks bimbingan nyata
+	config.DB.Where("chat_id = ?", chat.ID).Order("dikirim_at DESC").Limit(15).Find(&pesan)
+
+	if len(pesan) == 0 {
+		return ""
+	}
+
+	var chatBuilder strings.Builder
+	chatBuilder.WriteString("\n--- RIWAYAT BIMBINGAN NYATA DENGAN DOSEN ---\n")
+	// Balik urutan agar kronologis (dari lama ke baru)
+	for i := len(pesan) - 1; i >= 0; i-- {
+		role := "Mahasiswa"
+		if pesan[i].PengirimID != userID {
+			role = "Dosen"
+		}
+		chatBuilder.WriteString(fmt.Sprintf("%s: %s\n", role, pesan[i].Teks))
+	}
+	chatBuilder.WriteString("--- AKHIR RIWAYAT ---\n")
+
+	return chatBuilder.String()
+}
+
 // AnalyzeProposal menangani evaluasi dokumen proposal menggunakan Groq Llama 3.3 70B (Pengganti Gemini)
-func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string, error) {
+func (s *AIService) AnalyzeProposal(fileName string, fileContent string, chatContext string) (string, error) {
 	if s.ApiKey == "" {
 		return "GROQ_API_KEY belum di-set di file .env", nil
 	}
@@ -304,53 +340,43 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string) (string
 	reg := regexp.MustCompile(`[^a-zA-Z0-9\s\.,\?\!\(\)\[\]\{\}\:\;\-\_\+\=\/\@\#\$\%\^\&\*\r\n\t]`)
 	safeContent := reg.ReplaceAllString(fileContent, "")
 
-	// Groq Llama 3.3 70B memiliki context window besar, tapi kita batasi karakter agar aman di rate limit
 	if len(safeContent) > 30000 {
-		safeContent = safeContent[:30000] + "... (teks dipotong agar sesuai kapasitas Groq)"
+		safeContent = safeContent[:30000] + "... (teks dipotong)"
 	}
 
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik yang Sangat Kritis dan Teliti (Dosen Pembimbing Senior). 
-		Tugas Anda adalah membedah proposal mahasiswa berikut dan mencari KEJANGGALAN serta KETIDAKSINKRONAN antar bagian.
+		Anda adalah Reviewer Akademik Senior KonsulKu. 
+		Tugas Anda: Bedah proposal ini dan cari KEJANGGALAN.
+		
+		%s
+		
+		PENTING: Jika ada "RIWAYAT BIMBINGAN NYATA" di atas, Anda WAJIB menyelaraskan kritik Anda dengan arahan dosen tersebut. Jangan memberi saran yang bertentangan dengan apa yang sudah diminta dosen di chat.
 		
 		Nama File: %s
-		
 		--- ISI PROPOSAL ---
 		%s
 		--- AKHIR PROPOSAL ---
 		
-		Tolong berikan analisis tajam dalam Bahasa Indonesia dengan format berikut:
-		
+		Format Analisis (Bahasa Indonesia):
 		### 🔍 ANALISIS SINKRONISASI (CRITICAL)
-		Cek apakah Judul, Rumusan Masalah, dan Tujuan sudah sinkron. Cari jika ada kontradiksi.
-		
-		### ⚠️ KEJANGGALAN & KRITIK PEDAS
-		1. Evaluasi Latar Belakang: Apakah masalahnya nyata atau hanya dibuat-buat? Apakah urgensinya terlihat?
-		2. Evaluasi Metode: Apakah metode ini BENAR-BENAR bisa menjawab rumusan masalah di atas? Sebutkan jika ada ketidakcocokan.
-		
-		### 💡 REKOMENDASI PERBAIKAN DARURAT
-		Berikan langkah konkret yang harus dilakukan mahasiswa agar proposal ini layak diajukan ke sidang.
-	`, fileName, safeContent)
+		### ⚠️ KEJANGGALAN & KRITIK TAJAM
+		### 💡 REKOMENDASI PERBAIKAN (SESUAI ARAHAN DOSEN)
+	`, chatContext, fileName, safeContent)
 
-	messages := []GroqMessage{
-		{Role: "user", Content: prompt},
-	}
-
-	// Gunakan model 70B untuk analisis mendalam
+	messages := []GroqMessage{{Role: "user", Content: prompt}}
 	resp, err := s.callGroq(messages, nil, "llama-3.3-70b-versatile", s.ApiKey)
 	if err != nil {
-		return "Gagal menganalisis proposal via Groq: " + err.Error(), nil
+		return "Gagal menganalisis proposal: " + err.Error(), nil
 	}
 
 	if len(resp.Choices) > 0 {
 		return resp.Choices[0].Message.Content, nil
 	}
-
-	return "Analisis gagal, Groq tidak memberikan jawaban.", nil
+	return "Analisis gagal.", nil
 }
 
 // ChatWithProposal menangani tanya jawab interaktif berbasis isi dokumen (RAG)
-func (s *AIService) ChatWithProposal(fileName string, fullText string, question string) (string, error) {
+func (s *AIService) ChatWithProposal(fileName string, fullText string, question string, chatContext string) (string, error) {
 	if s.ApiKey == "" {
 		return "API Key belum siap.", nil
 	}
@@ -359,30 +385,29 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 	var contextText string
 
 	if err != nil || len(relevantChunks) == 0 {
-		// Fallback jika pencarian gagal, ambil 10rb karakter pertama
 		contextText = fullText
 		if len(contextText) > 10000 {
 			contextText = contextText[:10000]
 		}
 	} else {
-		// Gabungkan top 3 chunk dengan pemisah yang jelas
 		contextText = strings.Join(relevantChunks, "\n---\n")
 	}
 
 	prompt := fmt.Sprintf(`
-		Anda adalah Reviewer Akademik Profesional KonsulKu. 
-		Anda sedang berdiskusi dengan mahasiswa tentang proposalnya yang berjudul: "%s".
+		Anda adalah Reviewer Akademik Profesional KonsulKu.
 		
-		BERIKUT ADALAH BEBERAPA POTONGAN KONTEKS DOKUMEN YANG RELEVAN:
+		%s
+		
+		KONTEKS DOKUMEN RELEVAN:
 		%s
 		
 		PERTANYAAN MAHASISWA: "%s"
 		
-		Berikan jawaban yang spesifik, bernada akademis, namun tetap suportif berdasarkan potongan dokumen di atas.
-	`, fileName, contextText, question)
+		Tugas: Jawab pertanyaan mahasiswa berdasarkan isi dokumen DAN pertimbangkan riwayat chat dengan dosen di atas agar jawaban Anda tidak menyesatkan mahasiswa dari keinginan dosen pembimbingnya.
+	`, chatContext, contextText, question)
 
 	messages := []GroqMessage{
-		{Role: "system", Content: "Anda adalah asisten akademik yang membantu mahasiswa memperbaiki proposal penelitian mereka secara interaktif melalui diskusi tanya-jawab."},
+		{Role: "system", Content: "Anda adalah asisten akademik yang membantu mahasiswa memperbaiki proposal penelitian mereka dengan mempertimbangkan masukan dosen asli."},
 		{Role: "user", Content: prompt},
 	}
 
@@ -394,8 +419,7 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 	if len(resp.Choices) > 0 {
 		return resp.Choices[0].Message.Content, nil
 	}
-
-	return "Maaf, AI tidak memberikan respon spesifik saat ini.", nil
+	return "Maaf, AI tidak memberikan respon.", nil
 }
 
 func getLecturerInfoFromDB(name string) string {

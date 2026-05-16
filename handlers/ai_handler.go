@@ -134,6 +134,8 @@ func extractTextFromPDF(content []byte) (string, error) {
 
 // HandleProposalAnalysis menangani upload file proposal mahasiswa
 func HandleProposalAnalysis(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	
 	file, header, err := c.Request.FormFile("proposal")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File proposal wajib diunggah"})
@@ -165,17 +167,16 @@ func HandleProposalAnalysis(c *gin.Context) {
 			return
 		}
 		extractedText = text
-	} else if strings.HasSuffix(filenameLower, ".doc") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Format .doc lama belum didukung. Mohon gunakan .docx, .pdf, atau .txt"})
-		return
 	} else {
-		// Asumsi format .txt atau format teks lainnya
 		extractedText = string(content)
 	}
 
-	// Panggil Service
+	// Ambil Konteks Chat Dosen
 	service := GetAIService()
-	analysis, err := service.AnalyzeProposal(header.Filename, extractedText)
+	chatCtx := service.GetLecturerChatContext(userID)
+
+	// Panggil Service dengan konteks chat
+	analysis, err := service.AnalyzeProposal(header.Filename, extractedText, chatCtx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -188,15 +189,10 @@ func HandleProposalAnalysis(c *gin.Context) {
 	})
 }
 
-// ChatWithProposalRequest untuk request tanya jawab proposal
-type ChatWithProposalRequest struct {
-	FileName string `json:"fileName" binding:"required"`
-	FullText string `json:"fullText" binding:"required"`
-	Question string `json:"question" binding:"required"`
-}
-
 // HandleChatWithProposal memproses pertanyaan spesifik tentang isi proposal
 func HandleChatWithProposal(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+
 	var req ChatWithProposalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "FileName, FullText, dan Question harus diisi"})
@@ -204,7 +200,9 @@ func HandleChatWithProposal(c *gin.Context) {
 	}
 
 	service := GetAIService()
-	answer, err := service.ChatWithProposal(req.FileName, req.FullText, req.Question)
+	chatCtx := service.GetLecturerChatContext(userID)
+
+	answer, err := service.ChatWithProposal(req.FileName, req.FullText, req.Question, chatCtx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

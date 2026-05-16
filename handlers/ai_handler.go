@@ -204,9 +204,30 @@ func HandleProposalAnalysis(c *gin.Context) {
 	})
 }
 
+type ChatWithProposalRequest struct {
+	FileName string `json:"fileName" binding:"required"`
+	FullText string `json:"fullText" binding:"required"`
+	Question string `json:"question" binding:"required"`
+}
+
 // HandleChatWithProposal memproses pertanyaan spesifik tentang isi proposal
 func HandleChatWithProposal(c *gin.Context) {
-	userID := uint(c.MustGet("user_id").(float64))
+	// Ambil user_id dengan cara yang aman
+	var userID uint
+	idRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID tidak ditemukan"})
+		return
+	}
+	switch v := idRaw.(type) {
+	case float64:
+		userID = uint(v)
+	case uint:
+		userID = v
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Format User ID tidak valid"})
+		return
+	}
 
 	var req ChatWithProposalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -227,4 +248,3 @@ func HandleChatWithProposal(c *gin.Context) {
 		"answer": answer,
 	})
 }
-

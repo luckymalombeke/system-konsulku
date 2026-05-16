@@ -253,7 +253,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 		{Role: "user", Content: userMessage},
 	}
 
-	resp, err := s.callGroq(messages, tools, "llama-3.1-8b-instant", s.ChatApiKey)
+	resp, err := s.callGroq(messages, tools, s.ChatModel, s.ChatApiKey)
 	if err != nil {
 		return "Gagal di panggilan pertama: " + err.Error(), nil
 	}
@@ -284,7 +284,7 @@ func (s *AIService) AskSmartAssistant(userMessage string) (string, error) {
 					Content:    dbResult,
 				})
 
-				resp2, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
+				resp2, err := s.callGroq(messages, nil, s.ChatModel, s.ChatApiKey)
 				if err != nil {
 					return "Gagal merangkum jawaban: " + err.Error(), nil
 				}
@@ -376,7 +376,7 @@ func (s *AIService) AnalyzeProposal(fileName string, fileContent string, chatCon
 	`, chatContext, fileName, safeContent)
 
 	messages := []GroqMessage{{Role: "user", Content: prompt}}
-	resp, err := s.callGroq(messages, nil, "llama-3.3-70b-versatile", s.ApiKey)
+	resp, err := s.callGroq(messages, nil, s.Model, s.ApiKey)
 	if err != nil {
 		return "Gagal menganalisis proposal: " + err.Error(), nil
 	}

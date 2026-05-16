@@ -17,6 +17,7 @@ type AIService struct {
 	ApiKey     string
 	ChatApiKey string
 	Model      string
+	ChatModel  string
 }
 
 // Fungsi untuk memotong teks panjang (Chunking)
@@ -50,10 +51,21 @@ func NewAIService() *AIService {
 		chatKey = apiKey
 	}
 
+	model := os.Getenv("GROQ_AI_MODEL")
+	if model == "" {
+		model = "llama-3.3-70b-versatile"
+	}
+
+	chatModel := os.Getenv("GROQ_CHAT_MODEL")
+	if chatModel == "" {
+		chatModel = "llama-3.1-8b-instant"
+	}
+
 	return &AIService{
 		ApiKey:     apiKey,
 		ChatApiKey: chatKey,
-		Model:      "llama-3.3-70b-versatile",
+		Model:      model,
+		ChatModel:  chatModel,
 	}
 }
 
@@ -199,7 +211,7 @@ func (s *AIService) GetConsultationAdvice(topic string, problem string) (string,
 		{Role: "user", Content: prompt},
 	}
 
-	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
+	resp, err := s.callGroq(messages, nil, s.ChatModel, s.ChatApiKey)
 	if err != nil {
 		return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan.", nil
 	}
@@ -411,7 +423,7 @@ func (s *AIService) ChatWithProposal(fileName string, fullText string, question 
 		{Role: "user", Content: prompt},
 	}
 
-	resp, err := s.callGroq(messages, nil, "llama-3.1-8b-instant", s.ChatApiKey)
+	resp, err := s.callGroq(messages, nil, s.ChatModel, s.ChatApiKey)
 	if err != nil {
 		return "Gagal mendapatkan respon dari AI: " + err.Error(), nil
 	}

@@ -7,6 +7,7 @@ import (
 	"konsulku/middlewares"
 	"konsulku/models"
 	"konsulku/utils"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -43,6 +44,11 @@ func main() {
 	r := gin.Default()
 	r.Use(middlewares.CORSMiddleware())
 	r.Static("/uploads", "./uploads")
+
+	// Health Check for Deployment (Railway/Render)
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "KonsulKu Backend is running"})
+	})
 
 	r.POST("/login", handlers.HandleLogin)
 	r.POST("/register", handlers.HandleRegister)

@@ -58,14 +58,15 @@ func TestGenerateSmartFallback(t *testing.T) {
 
 // TestAnalyzeProposalInput mengetes validasi input (Simulasi)
 func TestAnalyzeProposalInput(t *testing.T) {
-	service := &AIService{client: nil} // Client nil untuk simulasi error API
+	service := &AIService{ApiKey: ""} // ApiKey kosong untuk simulasi luring/error API
 
-	_, err := service.AnalyzeProposal("draft.txt", "Isi proposal palsu")
+	res, err := service.AnalyzeProposal("draft.txt", "Isi proposal palsu", "")
 	
-	// Kita tidak mengetes Gemini-nya (karena itu external), 
-	// tapi kita mengetes bagaimana kode kita menangani situasi tertentu.
-	if err == nil && service.client == nil {
-		// Jika client nil, harusnya ada penanganan khusus atau error tertentu 
-		// (Tergantung implementasi kodemu)
+	if err != nil {
+		t.Errorf("AnalyzeProposal harusnya tidak mengembalikan error saat API key kosong, melainkan string fallback: %v", err)
+	}
+
+	if !strings.Contains(res, "GROQ_API_KEY") {
+		t.Errorf("Ekspektasi pesan 'GROQ_API_KEY belum di-set di file .env', tetapi hasil: %s", res)
 	}
 }

@@ -89,9 +89,10 @@ func (s *authService) Login(username, password, role string) (string, map[string
 	}
 
 	var detail map[string]interface{}
-	if user.Role == "dosen" {
+	switch user.Role {
+	case "dosen":
 		detail, _ = s.userRepo.GetDosenByUserID(user.ID)
-	} else if user.Role == "mahasiswa" {
+	case "mahasiswa":
 		detail, _ = s.userRepo.GetMahasiswaByUserID(user.ID)
 	}
 

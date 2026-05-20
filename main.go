@@ -26,6 +26,16 @@ func main() {
 	logrus.SetLevel(logrus.InfoLevel)
 	logrus.Info("Starting KonsulKu Backend Application...")
 
+	// Buat folder uploads jika belum ada
+	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
+		errDir := os.MkdirAll("./uploads", 0755)
+		if errDir != nil {
+			logrus.Warn("Gagal membuat folder uploads:", errDir)
+		} else {
+			logrus.Info("Folder uploads berhasil dibuat secara otomatis")
+		}
+	}
+
 
 	config.ConnectDatabase()
 

@@ -195,9 +195,29 @@ func (s *AIService) callGroq(messages []GroqMessage, tools interface{}, modelNam
 	return &groqResp, nil
 }
 
+// generateSmartFallback memberikan saran lokal jika API Key Groq tidak diatur
+func (s *AIService) generateSmartFallback(topic string, problem string) string {
+	tLower := strings.ToLower(topic)
+	pLower := strings.ToLower(problem)
+
+	if strings.Contains(tLower, "skripsi") || strings.Contains(pLower, "skripsi") || strings.Contains(tLower, "latar belakang") || strings.Contains(pLower, "latar belakang") {
+		return "### 💡 Saran Akademik (Offline Fallback)\nSaran untuk topik: " + topic + "\nMasalah: " + problem + "\n\n1. Kumpulkan data pendukung untuk Bab 1 skripsi.\n2. Tulis draf Progress Report bimbingan Anda secara terstruktur.\n3. Diskusikan batasan masalah dengan dosen pembimbing."
+	}
+
+	if strings.Contains(tLower, "golang") || strings.Contains(pLower, "golang") || strings.Contains(tLower, "database") || strings.Contains(pLower, "database") || strings.Contains(tLower, "koding") || strings.Contains(pLower, "koding") {
+		return "### 💡 Saran Teknis (Offline Fallback)\nSaran untuk topik: " + topic + "\nMasalah: " + problem + "\n\n1. Periksa kembali string koneksi database Anda di file config.\n2. Berikut contoh Code Snippet penanganan error koneksi di Go.\n3. Jalankan unit test untuk memastikan kegagalan terisolasi."
+	}
+
+	if strings.Contains(tLower, "magang") || strings.Contains(pLower, "magang") || strings.Contains(tLower, "cv") || strings.Contains(pLower, "cv") {
+		return "### 💡 Saran Karir (Offline Fallback)\nSaran untuk topik: " + topic + "\nMasalah: " + problem + "\n\n1. Buat CV & Portofolio yang relevan dengan posisi magang.\n2. Cari informasi lowongan magang melalui karir kampus.\n3. Persiapkan berkas administrasi pendukung."
+	}
+
+	return "### 💡 Saran Umum (Offline Fallback)\nSaran untuk topik: " + topic + "\nMasalah: " + problem + "\n\n1. Buat Ringkasan Masalah konsultasi Anda.\n2. Siapkan pertanyaan cadangan sebelum bimbingan.\n3. Atur janji temu ulang jika dosen berhalangan."
+}
+
 func (s *AIService) GetConsultationAdvice(topic string, problem string) (string, error) {
 	if s.ApiKey == "" {
-		return "### 💡 Saran (Offline)\n1. Siapkan bahan bimbingan.", nil
+		return s.generateSmartFallback(topic, problem), nil
 	}
 
 	prompt := fmt.Sprintf(`

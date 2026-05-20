@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"konsulku/config"
 	"konsulku/models"
+	"net/http"
 	"strings"
 	"time"
 
@@ -46,6 +47,8 @@ func HandleUpdateProfile(c *gin.Context) {
 			fmt.Println("DEBUG: Berhasil menyimpan foto ke", filepath)
 		} else {
 			fmt.Println("DEBUG: Gagal simpan file:", errSave)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan foto profil ke server: " + errSave.Error()})
+			return
 		}
 	} else if isMultipart {
 		fmt.Println("DEBUG: Tidak ada file 'foto_profil' ditemukan di form")

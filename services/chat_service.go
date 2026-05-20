@@ -26,7 +26,8 @@ func NewChatService() *ChatService {
 func (s *ChatService) SendMessage(pengirimID uint, role string, targetUserID uint, teks string) (*models.Pesan, error) {
 	var mhsID, dosenID uint
 
-	if role == "mahasiswa" {
+	switch role {
+	case "mahasiswa":
 		mhs, err := s.UserRepo.FindMahasiswaByUserID(pengirimID)
 		if err != nil {
 			logrus.WithField("pengirimID", pengirimID).Error("Pengirim mahasiswa tidak ditemukan")
@@ -39,7 +40,7 @@ func (s *ChatService) SendMessage(pengirimID uint, role string, targetUserID uin
 		}
 		mhsID = mhs.ID
 		dosenID = dsn.ID
-	} else if role == "dosen" {
+	case "dosen":
 		dsn, err := s.UserRepo.FindDosenByUserID(pengirimID)
 		if err != nil {
 			logrus.WithField("pengirimID", pengirimID).Error("Pengirim dosen tidak ditemukan")
@@ -52,7 +53,7 @@ func (s *ChatService) SendMessage(pengirimID uint, role string, targetUserID uin
 		}
 		mhsID = mhs.ID
 		dosenID = dsn.ID
-	} else {
+	default:
 		logrus.WithField("role", role).Error("Invalid role in SendMessage")
 		return nil, errors.New("role tidak valid")
 	}
@@ -186,7 +187,8 @@ func (s *ChatService) getTargetUserID(chat models.KonsultasiChat, pengirimID uin
 func (s *ChatService) GetChatContacts(userID uint, role string) ([]interface{}, error) {
 	var contacts []interface{}
 
-	if role == "dosen" {
+	switch role {
+	case "dosen":
 		dsn, err := s.UserRepo.FindDosenByUserID(userID)
 		if err != nil {
 			return nil, errors.New("dosen tidak ditemukan")
@@ -198,7 +200,7 @@ func (s *ChatService) GetChatContacts(userID uint, role string) ([]interface{}, 
 		for _, chat := range chats {
 			contacts = append(contacts, chat.Mahasiswa)
 		}
-	} else if role == "mahasiswa" {
+	case "mahasiswa":
 		mhs, err := s.UserRepo.FindMahasiswaByUserID(userID)
 		if err != nil {
 			return nil, errors.New("mahasiswa tidak ditemukan")
@@ -210,7 +212,7 @@ func (s *ChatService) GetChatContacts(userID uint, role string) ([]interface{}, 
 		for _, chat := range chats {
 			contacts = append(contacts, chat.Dosen)
 		}
-	} else {
+	default:
 		return nil, errors.New("role tidak valid")
 	}
 

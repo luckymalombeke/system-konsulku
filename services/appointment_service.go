@@ -26,7 +26,8 @@ func (s *AppointmentService) CreateBooking(appt *models.Appointment) error {
 }
 
 func (s *AppointmentService) GetAppointmentsByIDAndRole(userID uint, role string) ([]models.Appointment, error) {
-	if role == "mahasiswa" {
+	switch role {
+	case "mahasiswa":
 		mhs, err := s.UserRepo.FindMahasiswaByUserID(userID)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -37,7 +38,7 @@ func (s *AppointmentService) GetAppointmentsByIDAndRole(userID uint, role string
 			return []models.Appointment{}, nil
 		}
 		return s.Repo.GetAllForMahasiswa(mhs.ID)
-	} else if role == "dosen" {
+	case "dosen":
 		dsn, err := s.UserRepo.FindDosenByUserID(userID)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -48,9 +49,10 @@ func (s *AppointmentService) GetAppointmentsByIDAndRole(userID uint, role string
 			return []models.Appointment{}, nil
 		}
 		return s.Repo.GetAllForDosen(dsn.ID)
+	default:
+		logrus.WithField("role", role).Error("Invalid role when getting appointments")
+		return nil, errors.New("invalid role")
 	}
-	logrus.WithField("role", role).Error("Invalid role when getting appointments")
-	return nil, errors.New("invalid role")
 }
 
 func (s *AppointmentService) GetByID(id uint) (*models.Appointment, error) {

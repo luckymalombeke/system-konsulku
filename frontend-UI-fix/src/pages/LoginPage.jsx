@@ -65,24 +65,16 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center gap-3 mb-10">
               <div className="w-12 h-12 bg-white/10 backdrop-blur-lg rounded-2xl flex items-center justify-center shadow-lg border border-white/20 p-1.5 overflow-hidden">
-                <img 
-                  src="/logo-unklab.png" 
-                  alt="Logo UNKLAB" 
-                  className="w-full h-full object-contain drop-shadow-md"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = '<div class="w-6 h-6 rounded-full bg-[#FFD700]"></div>';
-                  }}
-                />
+                <GraduationCap className="w-7 h-7 text-[#FFD700] drop-shadow-md" />
               </div>
               <span className="text-white font-bold text-2xl tracking-tight drop-shadow-lg">KonsulKu</span>
             </div>
 
             <span className="inline-block bg-[#FFD700] text-[#3A1572] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 shadow-md">
-              Universitas Klabat
+              Portal Akademik
             </span>
             <h1 className="text-4xl font-extrabold text-white leading-[1.1] mb-5 drop-shadow-xl">
-              Portal Akademik<br />Generasi Baru
+              Portal Bimbingan<br />Generasi Baru
             </h1>
             <p className="text-white/90 text-sm leading-relaxed mb-8 drop-shadow-md font-medium">
               Inovasi ruang kolaborasi digital bagi mahasiswa dan dosen. Atur jadwal, diskusi real-time, dan pantau progres bimbingan dalam satu platform premium.
@@ -90,7 +82,7 @@ export default function LoginPage() {
           </div>
 
           <div className="text-white/40 text-xs font-medium">
-            © 2025 Universitas Klabat.<br />All rights reserved.
+            © 2025 KonsulKu Platform.<br />All rights reserved.
           </div>
         </div>
 

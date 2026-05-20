@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquare, Calendar, Bell, User,
-  BarChart2, LogOut, BookOpen
+  BarChart2, LogOut, BookOpen, GraduationCap
 } from 'lucide-react';
 import { AvatarPlaceholder } from './AvatarPlaceholder';
 
@@ -32,7 +32,7 @@ export function Sidebar({ variant = 'mahasiswa' }) {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   
   const user = {
-    name: storedUser.nama_lengkap || (variant === 'dosen' ? 'Dosen UNKLAB' : 'Mahasiswa UNKLAB'),
+    name: storedUser.nama_lengkap || (variant === 'dosen' ? 'Dosen' : 'Mahasiswa'),
     role: variant === 'dosen' ? 'Dosen' : 'Mahasiswa',
     idNumber: variant === 'dosen' ? `NIP: ${storedUser.no_induk || '-'}` : `NIM: ${storedUser.no_induk || '-'}`
   };
@@ -45,20 +45,12 @@ export function Sidebar({ variant = 'mahasiswa' }) {
       {/* Logo */}
       <div className="px-6 py-6 relative z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-black/10 p-1">
-            <img 
-              src="/logo-unklab.png" 
-              alt="Logo UNKLAB" 
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<div class="w-5 h-5 rounded-full bg-[#3A1572]"></div>';
-              }}
-            />
+          <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-black/10 border border-white/20">
+            <GraduationCap className="w-6 h-6 text-[#FFD700]" />
           </div>
           <div>
             <div className="text-white font-extrabold text-lg tracking-tight leading-tight drop-shadow-sm">KonsulKu</div>
-            <div className="text-[#FFD700]/80 font-medium text-xs tracking-wider uppercase mt-0.5">UNKLAB Portal</div>
+            <div className="text-[#FFD700]/80 font-medium text-xs tracking-wider uppercase mt-0.5">Portal Akademik</div>
           </div>
         </div>
       </div>

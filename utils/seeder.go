@@ -47,7 +47,7 @@ func SeedData() {
 		userMhs := models.User{
 			Username: "20010101",
 			Password: string(hashedPassword),
-			Email:    "lucky@student.unklab.ac.id",
+			Email:    "lucky@student.university.ac.id",
 			Role:     "mahasiswa",
 			IsActive: true,
 		}
@@ -91,7 +91,7 @@ func SeedData() {
 				user = models.User{
 					Username: d.Nip,
 					Password: string(hashedPassword),
-					Email:    d.Nip + "@unklab.ac.id",
+					Email:    d.Nip + "@university.ac.id",
 					Role:     "dosen",
 					IsActive: true,
 				}

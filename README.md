@@ -154,7 +154,7 @@ go run main.go
 
 ### 2. Frontend Setup
 ```bash
-cd frontend-UI-fix
+cd frontend
 npm install
 npm run dev
 ```

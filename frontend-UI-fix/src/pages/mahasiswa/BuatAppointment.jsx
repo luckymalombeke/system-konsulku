@@ -4,6 +4,7 @@ import { Layout } from '../../components/Layout';
 import { AvatarPlaceholder } from '../../components/AvatarPlaceholder';
 import { Check, ChevronLeft, ChevronRight, Upload, Calendar, Clock, X, Loader2, FileText, Trash2 } from 'lucide-react';
 import { getDosenList, createAppointment } from '../../api';
+import { ScheduleSuggestions } from '../../components/ScheduleSuggestions';
 
 const dosenOptions = [
   { id: 1, name: 'Stenly R. Pungus, S.Kom., MT., M.M., PhD', prodi: 'Sistem Informasi', skills: ['Machine Learning', 'Data Science'], available: true },
@@ -302,6 +303,23 @@ export default function BuatAppointment() {
                 <Clock size={16} className="text-[#4A1D8F]" />
                 Tentukan Jam untuk {selectedDate} April 2025
               </h3>
+
+              {/* AI Schedule Suggestions */}
+              {topic && selectedDosen && (
+                <div className="mb-6">
+                  <ScheduleSuggestions
+                    dosenId={selectedDosen}
+                    topic={topic}
+                    onSelectSlot={(slot) => {
+                      setSelectedTime(slot.time);
+                      // Update selectedDate if needed
+                      const dateNum = parseInt(slot.date.split('-')[2]);
+                      setSelectedDate(dateNum);
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="bg-[#F8F7FF] border border-[#4A1D8F]/20 rounded-xl p-5">
                 <p className="text-sm text-gray-600 mb-4">
                   Anda bisa mengajukan jam konsultasi secara bebas. Namun, jam ini masih berupa pengajuan (request) dan akan menunggu persetujuan (Approve/Reject) dari dosen yang bersangkutan.
@@ -340,7 +358,8 @@ export default function BuatAppointment() {
             </div>
           </div>
         )}
-        {/* Step 3: Detail Konsultasi */}
+
+        {/* Step 3: Detail Konsultasi */}
         {currentStep === 2 && (
           <div className="max-w-2xl mx-auto space-y-4">
             <div className="card">

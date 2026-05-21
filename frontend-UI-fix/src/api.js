@@ -177,6 +177,20 @@ export const chatWithProposal = (fileName, fullText, question) => {
   });
 };
 
+// 🆕 AI Auto-Suggest Scheduling
+export const suggestScheduleSlots = (dosenId, topic, preferredDays = [], preferredTime = 'morning', duration = 30) => {
+  return apiCall('/api/appointment/suggest-slots', {
+    method: 'POST',
+    body: JSON.stringify({
+      dosen_id: dosenId,
+      topic,
+      preferred_days: preferredDays,
+      preferred_time: preferredTime,
+      duration,
+    }),
+  });
+};
+
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');

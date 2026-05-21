@@ -105,6 +105,62 @@ Digunakan untuk notifikasi dan chat instan.
 
 ---
 
+## 🤖 AI Auto-Suggest Scheduling (NEW FEATURE ✨)
+
+### Suggest Appointment Slots
+AI intelligent scheduling yang suggest 3 waktu terbaik untuk appointment berdasarkan:
+- Jadwal ketersediaan dosen
+- Appointment yang sudah ada (avoid conflict)
+- Preferensi waktu mahasiswa (dari riwayat)
+- Topik konsultasi
+
+- **URL**: `/api/appointment/suggest-slots`
+- **Method**: `POST`
+- **Body**:
+  ```json
+  {
+    "dosen_id": 1,
+    "topic": "Bimbingan Skripsi Bab 1",
+    "preferred_days": [1, 2, 3],
+    "preferred_time": "morning",
+    "duration": 30
+  }
+  ```
+- **Response (200 OK)**:
+  ```json
+  {
+    "suggestions": [
+      {
+        "slot_date_time": "2026-05-25 10:00",
+        "reasoning": "Slot ini tersedia di jadwal Senin, Anda biasanya konsultasi di pagi hari, dan tidak ada conflict",
+        "confidence": 0.9,
+        "priority": 1
+      },
+      {
+        "slot_date_time": "2026-05-26 09:00",
+        "reasoning": "Slot di hari Selasa pagi, preferensi Anda",
+        "confidence": 0.85,
+        "priority": 2
+      },
+      {
+        "slot_date_time": "2026-05-27 11:00",
+        "reasoning": "Slot tersedia dengan durasi cukup",
+        "confidence": 0.8,
+        "priority": 3
+      }
+    ],
+    "message": "Berikut adalah 3 waktu terbaik untuk konsultasi dengan Prof. Stenly R. Pungus tentang 'Bimbingan Skripsi Bab 1'"
+  }
+  ```
+
+**Notes**:
+- `preferred_days` (optional): Array hari (0=Minggu, 1=Senin, ..., 6=Sabtu)
+- `preferred_time` (optional): "morning", "afternoon", atau "evening"
+- `duration` (optional): Default 30 menit
+- AI akan menggunakan riwayat appointment Anda untuk predict preferensi jika tidak diberikan
+
+---
+
 ## 🩺 Health Check
 - **URL**: `/health`
 - **Method**: `GET`

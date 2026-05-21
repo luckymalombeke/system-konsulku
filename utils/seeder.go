@@ -114,11 +114,48 @@ func SeedData() {
 
 	// Tampilkan daftar dosen yang sekarang ada di DB
 	var listDosen []models.Dosen
-	config.DB.Select("nama_lengkap, nip").Find(&listDosen)
+	config.DB.Select("id, nama_lengkap, nip").Find(&listDosen)
 	fmt.Println("[Seeder] 📋 Daftar Dosen Aktif di DB:")
 	for _, ld := range listDosen {
 		fmt.Printf("   - %s (NIP: %s)\n", ld.NamaLengkap, ld.Nip)
 	}
+
+	// 3. Seed DosenAvailability (Jadwal Ketersediaan)
+	fmt.Println("[Seeder] 📅 Membuat jadwal ketersediaan dosen...")
+	availabilityData := []struct {
+		DosenID   uint
+		DayOfWeek int
+		DayName   string
+		StartTime string
+		EndTime   string
+	}{
+		// Dosen 1: Senin - Kamis 09:00 - 15:00
+		{1, 1, "Senin", "09:00", "15:00"},
+		{1, 2, "Selasa", "09:00", "15:00"},
+		{1, 3, "Rabu", "09:00", "15:00"},
+		{1, 4, "Kamis", "09:00", "15:00"},
+		// Dosen 2: Selasa & Jumat 10:00 - 16:00
+		{2, 2, "Selasa", "10:00", "16:00"},
+		{2, 5, "Jumat", "10:00", "16:00"},
+	}
+
+	for _, av := range availabilityData {
+		var existingAv models.DosenAvailability
+		if err := config.DB.Where("dosen_id = ? AND day_of_week = ?", av.DosenID, av.DayOfWeek).First(&existingAv).Error; err != nil {
+			availability := models.DosenAvailability{
+				DosenID:   av.DosenID,
+				DayOfWeek: av.DayOfWeek,
+				DayName:   av.DayName,
+				StartTime: av.StartTime,
+				EndTime:   av.EndTime,
+				IsActive:  true,
+			}
+			config.DB.Create(&availability)
+			fmt.Printf("   ✅ Jadwal ketersediaan dibuat: Dosen ID %d, %s %s-%s\n", av.DosenID, av.DayName, av.StartTime, av.EndTime)
+		}
+	}
+
+	fmt.Println("[Seeder] ✅ Jadwal ketersediaan dosen selesai!")
 
 	fmt.Println("✅ Sinkronisasi data dummy selesai!")
 	fmt.Println("Silakan login dengan Username: 20010101 dan Password: password123")

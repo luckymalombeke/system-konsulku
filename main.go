@@ -41,7 +41,7 @@ func main() {
 
 	// AutoMigrate: otomatis tambahkan kolom/tabel yang belum ada di database
 	fmt.Println("Sedang menyelaraskan database...")
-	errMigrate := config.DB.AutoMigrate(&models.User{}, &models.Dosen{}, &models.Mahasiswa{}, &models.Appointment{}, &models.Notifikasi{}, &models.KonsultasiChat{}, &models.Pesan{})
+	errMigrate := config.DB.AutoMigrate(&models.User{}, &models.Dosen{}, &models.Mahasiswa{}, &models.Appointment{}, &models.Notifikasi{}, &models.KonsultasiChat{}, &models.Pesan{}, &models.DosenAvailability{})
 	if errMigrate != nil {
 		fmt.Println("Gagal migrasi database:", errMigrate)
 	} else {
@@ -75,6 +75,7 @@ func main() {
 		authorized.POST("/appointment", handlers.HandleCreateAppointment)
 		authorized.GET("/appointment", handlers.HandleGetAppointments)
 		authorized.GET("/appointment/:id", handlers.HandleGetAppointmentByID)
+		authorized.POST("/appointment/suggest-slots", handlers.HandleSuggestAppointmentSlots)
 		authorized.PUT("/appointment/:id/reject", handlers.HandleRejectAppointment)
 		authorized.PUT("/appointment/:id/cancel", handlers.HandleCancelAppointment)
 		authorized.PUT("/appointment/:id/accept", handlers.HandleAcceptAppointment)

@@ -14,6 +14,7 @@ import (
 )
 
 var apptService = services.NewAppointmentService()
+var scheduleService = services.NewScheduleService()
 
 func HandleCreateAppointment(c *gin.Context) {
 	userID := uint(c.MustGet("user_id").(float64))
@@ -111,4 +112,51 @@ func HandleGetAppointmentByID(c *gin.Context) {
 	}
 
 	c.JSON(200, appt)
+}
+
+// HandleSuggestAppointmentSlots suggest 3 waktu terbaik untuk appointment
+func HandleSuggestAppointmentSlots(c *gin.Context) {
+	userID := uint(c.MustGet("user_id").(float64))
+	role := c.MustGet("role").(string)
+
+	if role != "mahasiswa" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Hanya mahasiswa yang bisa request suggestion"})
+		return
+	}
+
+	var mhs models.Mahasiswa
+	if err := config.DB.Where("user_id = ?", userID).First(&mhs).Error; err != nil {
+		c.JSON(400, gin.H{"error": "Mahasiswa tidak ditemukan"})
+		return
+	}
+
+	var req models.SuggestSlotRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate request
+	if req.DosenID == 0 {
+		c.JSON(400, gin.H{"error": "dosen_id harus diisi"})
+		return
+	}
+	if req.Topic == "" {
+		c.JSON(400, gin.H{"error": "topic harus diisi"})
+		return
+	}
+
+	// Suggest waktu terbaik
+	response, err := scheduleService.SuggestScheduleSlots(req, mhs.ID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(response.Suggestions) == 0 {
+		c.JSON(400, gin.H{"error": "Tidak ada slot tersedia dalam 30 hari ke depan"})
+		return
+	}
+
+	c.JSON(200, response)
 }

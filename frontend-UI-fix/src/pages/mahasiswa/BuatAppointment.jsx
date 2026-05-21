@@ -35,7 +35,7 @@ const timeSlots = [
   { time: '17:00', available: false },
 ];
 
-const steps = ['Pilih Dosen', 'Pilih Jadwal', 'Detail Konsultasi', 'Konfirmasi'];
+const steps = ['Pilih Dosen & Topik', 'AI Sugesti Jadwal', 'Detail Konsultasi', 'Konfirmasi'];
 
 export default function BuatAppointment() {
   const navigate = useNavigate();
@@ -261,7 +261,36 @@ export default function BuatAppointment() {
           </div>
         )}
 
-        {/* Step 2: Pilih Jadwal */}
+        {/* Topic Input - Part of Step 1 */}
+        {currentStep === 0 && selectedDosen && (
+          <div className="card mt-6">
+            <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <FileText size={16} className="text-[#4A1D8F]" />
+              Topik Konsultasi
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Jelaskan singkat topik konsultasi Anda. AI akan menggunakan ini untuk menyarankan waktu konsultasi terbaik.
+            </p>
+            <input
+              type="text"
+              placeholder="Contoh: Revisi metodologi penelitian bab 3"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className="input-field mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCurrentStep(currentStep + 1)}
+                disabled={!selectedDosen || !topic}
+                className="flex-1 btn-primary py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Lanjut ke AI Sugesti Jadwal
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: AI Sugesti Jadwal */}
         {currentStep === 1 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Calendar */}
@@ -365,16 +394,6 @@ export default function BuatAppointment() {
             <div className="card">
               <h2 className="font-semibold text-gray-800 mb-5">Detail Konsultasi</h2>
               <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Topik Konsultasi <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: Revisi metodologi penelitian bab 3"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    className="input-field"
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi / Pertanyaan <span className="text-red-500">*</span></label>
                   <textarea

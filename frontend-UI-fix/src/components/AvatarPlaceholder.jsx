@@ -16,6 +16,7 @@ export function AvatarPlaceholder({ size = 40, className = '', src = null }) {
         <img
           src={fullSrc}
           alt="Profile"
+          loading="lazy"
           className="w-full h-full object-cover"
           onError={(e) => {
             e.target.onerror = null;

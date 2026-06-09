@@ -48,7 +48,7 @@ export default function LoginPage() {
       {/* Background Image & Overlay */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-100"
-        style={{ backgroundImage: `url('/campus-bg.jpg')` }}
+        style={{ backgroundImage: `url('/campus-bg.webp')` }}
       />
       <div className="absolute inset-0 z-0 bg-[#3A1572]/60 mix-blend-multiply" />
       <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#1b0a36] via-[#3A1572]/40 to-transparent" />
@@ -140,8 +140,10 @@ export default function LoginPage() {
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#3A1572]/50 focus:border-[#3A1572] transition-all duration-300 group-hover:border-gray-300 font-medium pr-10"
                   />
                   <button
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#3A1572] transition-colors"
+                    aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#3A1572] transition-colors p-2"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
